@@ -60,7 +60,11 @@ Provisioning writes the Vercel token, project ID and organization ID into ignore
 
 Before uploading, run `node scripts/configure-vercel.mjs` to verify access protection and settings, then `node scripts/check-vercel-upload.mjs`. The upload check verifies that source audio, credentials, database tools, local infrastructure state and dependencies are excluded. Default to `node scripts/vercel-cli.mjs deploy --yes --environment preview --verify --json` for later test deployments. The CLI's verification checks HTTPS with deployment protection intact.
 
-On a brand-new Vercel project, the CLI requires the first deployment to be labeled Production and explicitly requests approval before accepting `--prod`. This label does not remove the configured All Deployments authentication gate. Do not change protection or publish an unprotected domain to work around this requirement. The initial protected build is pending that specific approval; no application deployment has been created yet.
+The initial protected build was approved and deployed on November 3, 2026. Open https://seshgrid.vercel.app and sign into Vercel with access to the SeshGrid project. Vercel required the initial build to be labeled Production; All Deployments authentication protects the stable URL and generated deployment URLs. Later test builds can use the Preview target. Public sign-ups remain deferred.
+
+The authenticated HTTPS check passed for the page, eight JavaScript/CSS assets and `/recorder.js`. An unauthenticated browser was sent to Vercel's login page. The first automatic alias check briefly returned 404; subsequent checks returned 200 without a source change. `node scripts/check-hosted-studio.mjs https://seshgrid.vercel.app` repeats the authenticated asset check without printing response bodies or credentials.
+
+For the remaining hardware check, use a browser with microphone access and headphones: upload a beat, add/select an empty vocal track, record a short take, stop, play it back, adjust the mix, save, reopen, and export a WAV. Browser microphone permission and the Vercel sign-in require the tester's interaction. This hardware check is not yet marked passed.
 
 ## Architecture
 

@@ -18,7 +18,7 @@
 - [ ] Configure and test confirmation-email delivery for public sign-ups.
 - [ ] Validate real microphone hardware, interruption recovery and latency on target browsers.
 - [x] Push the implementation and automated checks to the private GitHub repository.
-- [ ] Verify a Vercel deployment after service configuration.
+- [x] Deploy a private Vercel build and verify HTTPS page/assets with access protection enabled.
 
 ## Stabilization
 

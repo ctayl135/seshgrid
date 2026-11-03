@@ -21,6 +21,7 @@ async function files(dir) {
 }
 const paths = await files(".next/static");
 const secrets = [
+  "VERCEL_TOKEN",
   "SUPABASE_DB_PASS",
   "SUPABASE_DB_URL",
   "SUPABASE_POOLER_URL",
