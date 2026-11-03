@@ -3,7 +3,14 @@ import { createClient } from "@supabase/supabase-js";
 try {
   process.loadEnvFile(".env.local");
 } catch {}
+try {
+  process.loadEnvFile(".env");
+} catch {}
 const env = process.env;
+env.NEXT_PUBLIC_SUPABASE_URL ||=
+  env.STUDIO_SUPABASE_PROJECT_URL || env.SUPABASE_PROJECT_URL;
+env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||=
+  env.STUDIO_SUPABASE_PUBLISHABLE_KEY || env.SUPABASE_PUBLISHABLE_KEY;
 const required = [
   "NEXT_PUBLIC_SUPABASE_URL",
   "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",

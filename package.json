@@ -22,6 +22,7 @@
     "@types/react-dom": "19.3.0",
     "esbuild": "0.28.2",
     "fake-indexeddb": "6.2.7",
+    "pg": "8.23.1",
     "prettier": "3.9.10",
     "tsx": "4.23.15",
     "typescript": "7.0.2"

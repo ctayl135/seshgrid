@@ -13,7 +13,9 @@
 - [x] Real-browser synthetic capture, PCM encoding, decode, offline mixing and WAV export integration check.
 - [x] Supabase email account integration and private project/audio persistence code.
 - [x] Owner-scoped database/storage migration and deployment instructions.
-- [ ] Configure a live Supabase project and verify cross-user isolation.
+- [x] Provision a Supabase Free project and verify live cross-user isolation.
+- [x] Verify actual password sign-in, repeated cloud saves and source-audio restoration.
+- [ ] Configure and test confirmation-email delivery for public sign-ups.
 - [ ] Validate real microphone hardware, interruption recovery and latency on target browsers.
 - [x] Push the implementation and automated checks to the private GitHub repository.
 - [ ] Verify a Vercel deployment after service configuration.

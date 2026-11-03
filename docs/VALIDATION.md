@@ -7,7 +7,9 @@ Validated on November 2, 2026 using the local Windows environment and the in-app
 - TypeScript type check: passed.
 - Nine tests: passed. Coverage includes binary WAV headers/interleaving/clipping; solo/mute selection; clip split invariants; malformed manifest rejection; binary project-file round trip and corruption rejection; PCM start-frame alignment, stereo downmix and final partial-buffer flushing; IndexedDB transaction persistence and project replacement.
 - Production build: passed, including the recording, backup and confirmation refinements.
-- Live cloud privacy check script is supplied, but requires two confirmed test accounts and a configured Supabase project. Not yet executed.
+- Live cloud privacy checks passed on the provisioned Supabase Free project. Anonymous and other-account reads, writes, deletes and cross-folder uploads were denied while owner access remained valid.
+- Actual password sign-in, source-audio upload, repeated cloud saving, project listing, manifest restoration and byte-for-byte source-audio restoration passed using the application persistence module. Temporary accounts and test data were removed afterward.
+- Production build with the provisioned public configuration passed. Ten browser JavaScript bundles were checked: the public URL/key were present and private database credentials were absent.
 
 ## Browser workflow checks
 
@@ -26,7 +28,7 @@ Validated on November 2, 2026 using the local Windows environment and the in-app
 
 ## Remaining release validation
 
-Real microphone hardware and listening quality; microphone/device interruptions; latency compensation across devices; mobile/background behavior; browser storage/network failure recovery; live Supabase cross-user isolation; deployed Auth redirects; and end-to-end Vercel smoke testing. Unit-level PCM verification does not substitute for microphone hardware checks.
+Real microphone hardware and listening quality; microphone/device interruptions; latency compensation across devices; mobile/background behavior; browser storage/network failure recovery; custom SMTP confirmation-email delivery; deployed Auth redirects; and end-to-end Vercel smoke testing. Unit-level PCM verification does not substitute for microphone hardware checks.
 
 ## Repository
 

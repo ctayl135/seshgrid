@@ -24,6 +24,8 @@ Microphone recording uses an AudioWorklet producing lossless mono PCM WAV, align
 
 ## Supabase setup (required for accounts and cloud projects)
 
+The SeshGrid workspace now has a provisioned Supabase Free project. Its owner-only project policies and private audio bucket are applied. Live cross-account privacy and sign-in/save/reopen checks passed. CLI-managed credentials stay in ignored local configuration; they are not part of the repository.
+
 No service credentials are included. Create/connect a Supabase project, then:
 
 1. Run `supabase/migrations/001_private_projects.sql` in its SQL editor (once, on a new project). It creates the projects table, private `project-audio` bucket, owner-only RLS policies, and explicit authenticated database grants. Never change this bucket to public.
@@ -32,11 +34,21 @@ No service credentials are included. Create/connect a Supabase project, then:
 4. Restart development/build after setting variables. Create an account, confirm email and sign in. A magic sign-in link is available for existing accounts.
 5. Before public launch, test with two accounts: account B must neither list/read/update A's project rows nor download A's audio by known object path. Also verify anonymous requests fail. To run the included live checks, create two confirmed test accounts and put `SUPABASE_TEST_EMAIL_A`, `SUPABASE_TEST_PASSWORD_A`, `SUPABASE_TEST_EMAIL_B`, and `SUPABASE_TEST_PASSWORD_B` in ignored `.env.local`, then run `node scripts/verify-cloud.mjs`. It creates and cleans up its own temporary fixture. These checks require a configured Supabase project and are not replaced by unit tests. Test passwords must never use a `NEXT_PUBLIC_` prefix.
 
+When using provisioned infrastructure, `next.config.ts` maps `SUPABASE_PROJECT_URL` and `SUPABASE_PUBLISHABLE_KEY` into the two public browser settings. Only those values are exposed. It also supports `STUDIO_`-prefixed names if the provisioning configuration uses them. Database connection strings and passwords stay server/local-only.
+
+Run `node scripts/migrate-cloud.mjs` to apply the tracked migration once using the provisioned database connection. It tracks completed migrations and verifies the private bucket and policies. The connection verifies both TLS certificate trust and hostname; `supabase/certs/prod-ca-2021.crt` is the public Supabase root CA downloaded from https://supabase-downloads.s3-ap-southeast-1.amazonaws.com/prod/ssl/prod-ca-2021.crt (SHA-256 `807025AD50D4ED219D2C9C7D299C004F824EB00CF7F65AFEF607D07B72E6CAFA`). This certificate is public trust material, not a credential.
+
+For a fully automated integration check on this newly provisioned project, run `node --import tsx scripts/verify-provisioned-cloud.mjs`. It creates isolated temporary Auth database fixtures without sending email, then tests actual password sign-in, REST/storage policies, repeated studio saves and audio restoration. It removes its temporary accounts and data afterward. Run only against your intended development project; do not use this fixture helper against an unrelated production database.
+
+**Before public sign-ups:** configure custom SMTP and verify confirmation-email delivery. The built-in Supabase sender is restricted to organization-team addresses, so enabling email/password sign-up alone does not enable registration for every musician. Keep email confirmation enabled. See https://supabase.com/docs/guides/auth/auth-smtp. Auth redirect URLs also need to match the deployed studio domain.
+
 Cloud object paths are `user-id/project-id/asset-id`. Original assets are immutable. Each save uploads referenced audio first, then commits the manifest. Failed uploads cannot replace the previous cloud manifest. Orphaned files from partial saves/deleted clips are retained for recovery; future maintenance should implement owner-authorized garbage collection. Saving is explicit; there is no autosave or multi-device conflict resolution yet (last completed cloud save wins).
 
 ## Deploy through Vercel
 
 Push this repository to GitHub, import it into Vercel, choose the Next.js preset and Node.js 24, and use `pnpm install --frozen-lockfile` and `pnpm build`. Add the two Supabase public environment variables to the desired environments and redeploy. Set Supabase Auth redirect URLs to match the resulting HTTPS domain. No application server secrets are needed. The studio needs HTTPS (localhost is permitted for development) for microphone access and AudioWorklet. Vercel documents Node.js 24 support at https://vercel.com/docs/functions/runtimes/node-js/node-js-versions.
+
+You can alternatively configure only `SUPABASE_PROJECT_URL` and `SUPABASE_PUBLISHABLE_KEY` on Vercel; the build maps them to the browser configuration. Do not upload the whole provisioning `.env` or any database credentials to a browser/static artifact. `node scripts/check-client-bundle.mjs` verifies that the production browser bundles contain the public configuration and none of the configured private database credentials. Vercel's Hobby plan is restricted to personal, non-commercial use; review the appropriate operator plan before a commercial platform launch (https://vercel.com/docs/plans/hobby). No paid hosting plan is provisioned automatically by this repository.
 
 The application is free to users. Hosting, storage, bandwidth and email remain operator resources subject to provider limits; this is not a promise of unlimited free infrastructure. No paid resources are automatically provisioned by this code.
 
