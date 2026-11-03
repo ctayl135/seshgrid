@@ -6,6 +6,7 @@ node_modules/
 test-results/
 .vercel/
 .projects/
+.tools/
 
 .projects/cache
 .projects/vault

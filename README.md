@@ -52,6 +52,16 @@ You can alternatively configure only `SUPABASE_PROJECT_URL` and `SUPABASE_PUBLIS
 
 The application is free to users. Hosting, storage, bandwidth and email remain operator resources subject to provider limits; this is not a promise of unlimited free infrastructure. No paid resources are automatically provisioned by this code.
 
+### Private test deployment
+
+A Vercel Hobby project is provisioned for private testing. Its framework is Next.js, Node.js is 24.x, and Vercel Authentication is configured for **All Deployments**. Public registration/email delivery remains deferred. Both Preview and Production have only the two public Supabase environment variables; private database credentials are not sent to hosting.
+
+Provisioning writes the Vercel token, project ID and organization ID into ignored local configuration. `scripts/vercel-cli.mjs` loads them into the CLI process environment, never command arguments. Install the official Vercel CLI separately in ignored `.tools/vercel`; the project currently uses CLI 65.9.0. Do not edit CLI-managed `.vercel` files.
+
+Before uploading, run `node scripts/configure-vercel.mjs` to verify access protection and settings, then `node scripts/check-vercel-upload.mjs`. The upload check verifies that source audio, credentials, database tools, local infrastructure state and dependencies are excluded. Default to `node scripts/vercel-cli.mjs deploy --yes --environment preview --verify --json` for later test deployments. The CLI's verification checks HTTPS with deployment protection intact.
+
+On a brand-new Vercel project, the CLI requires the first deployment to be labeled Production and explicitly requests approval before accepting `--prod`. This label does not remove the configured All Deployments authentication gate. Do not change protection or publish an unprotected domain to work around this requirement. The initial protected build is pending that specific approval; no application deployment has been created yet.
+
 ## Architecture
 
 - `src/app`: Next.js App Router entry point and responsive dark theme.

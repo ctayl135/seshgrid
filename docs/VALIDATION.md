@@ -32,4 +32,8 @@ Real microphone hardware and listening quality; microphone/device interruptions;
 
 ## Repository
 
+## Vercel preparation
+
+The free Hobby plan and SeshGrid project are provisioned. Next.js/Node.js 24 settings and Vercel Authentication for All Deployments were confirmed through the project API. The two public Supabase settings are configured for Preview and Production; database credentials stay local. A dry upload contains 20 source/configuration files totaling 126,239 bytes, with no credentials, database tools, audio fixtures or local provisioning state. The CLI blocked the initial Preview build because the first project deployment must target Production and requires explicit approval. Nothing has been deployed at this stage.
+
 Source and CI are pushed to the private `ctayl135/seshgrid` GitHub repository. GitHub Actions passed on the implementation commits. No provider credentials, recorded user audio, generated test fixtures, or local project backups are tracked.
