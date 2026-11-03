@@ -66,3 +66,5 @@ Source and CI are pushed to the private `ctayl135/seshgrid` GitHub repository. G
 - In the real browser, uploaded generated test audio, applied Ping-Pong Throws, undid to dry and redid to the preset. A fresh studio instance offered the unsaved draft and restored its title, track, preset and source audio.
 - Recovered audio exported as a non-silent 44.1 kHz, 16-bit stereo WAV. Explicit Save succeeded; a fresh studio instance no longer offered the saved recovery draft. User recordings were not used in these tests.
 - Recovery is separate from manual saves and cloud storage. History is session-only; checkpoints wait for recording/busy operations to finish. Sudden shutdown before a checkpoint and broader device interruptions remain limitations.
+
+The recovery build is Ready at https://seshgrid-poi7dpjcb-ctayl135-6200-stripe.vercel.app. Stable private test alias: https://seshgrid-lab-ctayl135-6200-stripe.vercel.app (Vercel Authentication remains enabled for all deployments). Hosted audio import, preset undo/redo and local save passed. Production alias was not changed.

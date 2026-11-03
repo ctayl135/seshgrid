@@ -2,6 +2,8 @@
 
 A free browser recording studio built with Next.js, React, TypeScript, Web Audio and Supabase. Phase 1 has no billing, subscriptions, or paid feature gates.
 
+Private development studio: https://seshgrid-lab-ctayl135-6200-stripe.vercel.app. Reuse this address for browser saves and recovery across preview updates. Projects stored at earlier deployment addresses remain there; transfer them using Backup → Open project file.
+
 ## Run locally
 
 Use Node.js 24 and pnpm 11.25.0. Run `pnpm install`, then `pnpm dev`, and visit http://127.0.0.1:3000. Run `pnpm test`, `pnpm typecheck`, and `pnpm build` before shipping. Package versions and the package manager are pinned. GitHub Actions runs those checks on pushes and pull requests.
