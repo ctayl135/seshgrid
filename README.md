@@ -24,6 +24,8 @@ Microphone recording uses an AudioWorklet producing lossless mono PCM WAV, align
 
 ## Underground vocal and adlib presets
 
+Private preset build: https://seshgrid-93pf6niol-ctayl135-6200-stripe.vercel.app. This preview includes the new effects; the original stable deployment remains a separate build. Vercel Authentication protects the preview.
+
 Select a vocal track, then choose a sound in the channel strip's **UNDERGROUND** preset selector. Presets apply immediately during playback and are included in WAV exports.
 
 | Lead vocals | Adlibs and backing vocals |

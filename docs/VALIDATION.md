@@ -43,6 +43,8 @@ Validated on November 2, 2026 using the local Windows environment and the in-app
 - UI checks passed for applying lead/adlib presets, editing a preset into Custom settings, Reset FX, and saving/reopening Ping-Pong Throws with its parameters intact.
 - Portable and IndexedDB round trips retain preset controls. Live Supabase sign-in, repeated save/reopen and byte-for-byte audio restoration passed with a preset-bearing manifest; temporary test accounts were removed afterward.
 - Production build, TypeScript and browser credential-leak checks passed.
+- Private preset preview deployed Ready at https://seshgrid-93pf6niol-ctayl135-6200-stripe.vercel.app with Vercel Authentication. The hosted studio, supporting assets and recording processor passed HTTPS checks.
+- Opened the preview using the existing authenticated browser session, imported a local backup of the user's test take and duplicated it into a separate audition project. Applied Dark Trap Lead and saved locally. Its exported stereo WAV differs from the original mix as expected. No recorded user audio was added to source control or uploaded to cloud project storage during this audition.
 
 ## Remaining release validation
 
