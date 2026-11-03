@@ -64,7 +64,9 @@ The initial protected build was approved and deployed on November 3, 2026. Open 
 
 The authenticated HTTPS check passed for the page, eight JavaScript/CSS assets and `/recorder.js`. An unauthenticated browser was sent to Vercel's login page. The first automatic alias check briefly returned 404; subsequent checks returned 200 without a source change. `node scripts/check-hosted-studio.mjs https://seshgrid.vercel.app` repeats the authenticated asset check without printing response bodies or credentials.
 
-For the remaining hardware check, use a browser with microphone access and headphones: upload a beat, add/select an empty vocal track, record a short take, stop, play it back, adjust the mix, save, reopen, and export a WAV. Browser microphone permission and the Vercel sign-in require the tester's interaction. This hardware check is not yet marked passed.
+The baseline hardware check passed on November 3, 2026: an original test beat was uploaded, a real microphone take was captured, and the user confirmed clear voice playback. Beat volume and vocal reverb were adjusted, the session was saved locally and reopened, and a valid stereo WAV was exported. Source audio remained byte-for-byte unchanged after reopening. Cloud save/reopen passed separately with temporary test accounts; the real microphone session used browser storage and local backup files. Recorded user audio is not tracked in this repository.
+
+To repeat the check, use a browser with microphone access and headphones: upload a beat, add/select an empty vocal track, record a short take, stop, play it back, adjust the mix, save, reopen, and export a WAV. Browser microphone permission and the Vercel sign-in require the tester's interaction. Broader hardware, interruption and latency testing remains in the roadmap.
 
 ## Architecture
 

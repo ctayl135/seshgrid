@@ -24,17 +24,27 @@ Validated on November 2, 2026 using the local Windows environment and the in-app
 - Retested the in-app confirmation: cancel preserved unsaved changes, and continuing restored the selected backup successfully.
 - Retested the refined dry/wet mixing graph: the fully right-panned mono vocal rendered at the expected 4,800 PCM peak with a silent left channel, verifying the 0.8 track gain without unintended doubling.
 - Real-browser synthetic capture integration passed: actual AudioWorklet → PCM WAV → decode → offline mix/export. Captured 0.900 seconds with RMS 0.0707; output was 44.1 kHz / 16-bit stereo, right peak 0.0500 and left peak 0.0000. The isolated test uses the production `MicrophoneCapture` and `AudioEngine` with an oscillator stream, not microphone permission or a simulated AudioWorklet.
-- Microphone startup in the in-app browser reached the permission timeout. The studio recovered and showed a clear error; no microphone take was captured. Hardware recording still needs validation in a browser with microphone permission.
+- An earlier microphone startup reached the permission timeout. The studio recovered and showed a clear error. The subsequent live hardware check below passed after access was granted.
+
+## Live microphone workflow — November 3, 2026
+
+- Opened the protected HTTPS studio after the user signed into Vercel.
+- Uploaded an original generated drum/bass beat and captured a real microphone take of approximately 19.7 seconds.
+- The user confirmed that their voice was clear over the beat during playback.
+- Adjusted beat gain to 0.7 and vocal reverb to 5%, saved locally and reopened the session.
+- Compared project backups before and after reopening: all source audio bytes were preserved exactly, and the mix settings were restored.
+- Exported the reopened mix: valid 44.1 kHz, 16-bit stereo PCM WAV, approximately 21.198 seconds including the effect tail, with non-silent audio.
+- The session remains in browser storage and local Downloads backups. No recorded user audio or project backup was added to the repository or uploaded to Supabase during this test. Cloud persistence was verified separately with temporary test fixtures.
 
 ## Remaining release validation
 
-Real microphone hardware and listening quality; microphone/device interruptions; latency compensation across devices; mobile/background behavior; browser storage/network failure recovery; custom SMTP confirmation-email delivery; deployed Auth redirects; and the signed-in browser recording workflow on Vercel. Unit-level PCM verification does not substitute for microphone hardware checks.
+Microphone/device interruptions; latency compensation across devices; mobile/background behavior; browser storage/network failure recovery; custom SMTP confirmation-email delivery; and deployed Auth redirects. The baseline signed-in HTTPS recording workflow has passed, but broader device and browser coverage remains necessary before a public release.
 
 ## Private Vercel deployment — November 3, 2026
 
 The free Hobby plan and SeshGrid project are provisioned. Next.js/Node.js 24 settings and Vercel Authentication for All Deployments were confirmed through the project API. The two public Supabase settings are configured for Preview and Production; database credentials stay local. A dry upload contains 20 source/configuration files totaling 126,239 bytes, with no credentials, database tools, audio fixtures or local provisioning state.
 
-The user approved the first protected Production-labeled build. Deployment `dpl_B8gL66NnhmaMty46Z7Y79VPzErU3` is Ready at https://seshgrid.vercel.app, with generated URL https://seshgrid-pmnpi9jvx-ctayl135-6200-stripe.vercel.app. The initial alias verification returned 404; subsequent authenticated checks returned 200 without a source change. The page, eight JavaScript/CSS assets and `/recorder.js` passed the HTTPS asset check. An unauthenticated browser redirected to Vercel login, confirming the access gate. Hardware testing awaits the user's Vercel sign-in and microphone permission.
+The user approved the first protected Production-labeled build. Deployment `dpl_B8gL66NnhmaMty46Z7Y79VPzErU3` is Ready at https://seshgrid.vercel.app, with generated URL https://seshgrid-pmnpi9jvx-ctayl135-6200-stripe.vercel.app. The initial alias verification returned 404; subsequent authenticated checks returned 200 without a source change. The page, eight JavaScript/CSS assets and `/recorder.js` passed the HTTPS asset check. An unauthenticated browser redirected to Vercel login, confirming the access gate. The user then signed in and completed the live microphone check above.
 
 ## Repository
 

@@ -16,7 +16,8 @@
 - [x] Provision a Supabase Free project and verify live cross-user isolation.
 - [x] Verify actual password sign-in, repeated cloud saves and source-audio restoration.
 - [ ] Configure and test confirmation-email delivery for public sign-ups.
-- [ ] Validate real microphone hardware, interruption recovery and latency on target browsers.
+- [x] Validate real microphone capture, playback, mixing, local save/reopen and WAV export on the private HTTPS studio.
+- [ ] Broaden interruption recovery, device/browser compatibility and latency testing.
 - [x] Push the implementation and automated checks to the private GitHub repository.
 - [x] Deploy a private Vercel build and verify HTTPS page/assets with access protection enabled.
 
