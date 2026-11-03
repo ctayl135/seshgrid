@@ -48,15 +48,15 @@ assert.notEqual(owner, other, "Use two different confirmed test accounts");
 const id = crypto.randomUUID(),
   asset = crypto.randomUUID(),
   path = `${owner}/${id}/${asset}`;
+const unauthorizedId = crypto.randomUUID(),
+  unauthorizedPath = `${owner}/${id}/${crypto.randomUUID()}`;
 try {
-  const create = await a
-    .from("projects")
-    .insert({
-      id,
-      owner_id: owner,
-      name: "SeshGrid temporary privacy test",
-      manifest: { test: true },
-    });
+  const create = await a.from("projects").insert({
+    id,
+    owner_id: owner,
+    name: "SeshGrid temporary privacy test",
+    manifest: { test: true },
+  });
   assert.equal(create.error, null, "Owner can create a project");
   const upload = await a.storage
     .from("project-audio")
@@ -88,24 +88,19 @@ try {
     remove.error || remove.data.length === 0,
     "Other user cannot delete owner project",
   );
-  const badInsert = await b
-    .from("projects")
-    .insert({
-      id: crypto.randomUUID(),
-      owner_id: owner,
-      name: "unauthorized",
-      manifest: {},
-    });
+  const badInsert = await b.from("projects").insert({
+    id: unauthorizedId,
+    owner_id: owner,
+    name: "unauthorized",
+    manifest: {},
+  });
   assert.ok(
     badInsert.error,
     "Other user cannot create a project under owner identity",
   );
   const badUpload = await b.storage
     .from("project-audio")
-    .upload(
-      `${owner}/${id}/${crypto.randomUUID()}`,
-      new Blob(["unauthorized"]),
-    );
+    .upload(unauthorizedPath, new Blob(["unauthorized"]));
   assert.ok(badUpload.error, "Other user cannot upload into owner folder");
   const ownRead = await a.from("projects").select("name").eq("id", id).single();
   assert.equal(
@@ -119,8 +114,13 @@ try {
     "Live privacy checks passed: anonymous and cross-account reads/writes denied; owner access preserved.",
   );
 } finally {
-  const audioCleanup = await a.storage.from("project-audio").remove([path]);
-  const projectCleanup = await a.from("projects").delete().eq("id", id);
+  const audioCleanup = await a.storage
+    .from("project-audio")
+    .remove([path, unauthorizedPath]);
+  const projectCleanup = await a
+    .from("projects")
+    .delete()
+    .in("id", [id, unauthorizedId]);
   if (audioCleanup.error || projectCleanup.error)
     console.error(
       "Temporary privacy-test cleanup failed; inspect the named test records in Supabase.",

@@ -14,7 +14,8 @@
 - [x] Owner-scoped database/storage migration and deployment instructions.
 - [ ] Configure a live Supabase project and verify cross-user isolation.
 - [ ] Validate real microphone hardware, interruption recovery and latency on target browsers.
-- [ ] Push reviewed code to GitHub and verify a Vercel deployment.
+- [x] Push the implementation and automated checks to the private GitHub repository.
+- [ ] Verify a Vercel deployment after service configuration.
 
 ## Stabilization
 
