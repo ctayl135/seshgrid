@@ -12,6 +12,7 @@
 - [x] Portable project backups, restore, and independent session copies.
 - [x] Undo/redo with grouped controls and separate local session recovery checkpoints.
 - [x] Microphone selector and live input/stereo mix peak meters.
+- [x] Searchable Projects library and saved-mix playlist with automatic next-song playback.
 - [x] Tests for PCM capture, WAV encoding, source edits, local persistence and backup integrity.
 - [x] Real-browser synthetic capture, PCM encoding, decode, offline mixing and WAV export integration check.
 - [x] Supabase email account integration and private project/audio persistence code.

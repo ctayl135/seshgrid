@@ -27,6 +27,7 @@ import { packSession, unpackSession } from "@/lib/portable";
 import Waveform from "./Waveform";
 import VocalRack from "./VocalRack";
 import LevelMeter from "./LevelMeter";
+import ProjectLibrary from "./ProjectLibrary";
 import MicrophoneInput from "./MicrophoneInput";
 import { effectTail } from "@/lib/presets";
 import { useProjectEditor } from "./useProjectEditor";
@@ -1101,7 +1102,7 @@ export default function Studio() {
       {modal && (
         <div className="overlay">
           <section
-            className="modal"
+            className={modal === "projects" ? "modal projects-view" : "modal"}
             role="dialog"
             aria-modal="true"
             aria-label={modal === "auth" ? "Account" : "Saved projects"}
@@ -1288,42 +1289,15 @@ export default function Studio() {
                 ) : (
                   <p>No recovery drafts from earlier sessions.</p>
                 )}
-                <h3>On this browser</h3>
-                {local.length ? (
-                  local.map((s) => (
-                    <button
-                      className="project-row"
-                      key={s.project.id}
-                      disabled={busy}
-                      onClick={() => reopen(async () => s)}
-                    >
-                      {s.project.name}
-                      <small>
-                        {new Date(s.project.updatedAt).toLocaleString()}
-                      </small>
-                    </button>
-                  ))
-                ) : (
-                  <p>No local projects saved yet.</p>
-                )}
-                <h3>Private cloud</h3>
-                {cloud.length ? (
-                  cloud.map((s) => (
-                    <button
-                      className="project-row"
-                      key={s.id}
-                      disabled={busy}
-                      onClick={() => reopen(() => loadCloud(s.id, user!.id))}
-                    >
-                      {s.name}
-                      <small>{new Date(s.updated_at).toLocaleString()}</small>
-                    </button>
-                  ))
-                ) : (
-                  <p>
-                    {user
-                      ? "Save a project to sync it here."
-                      : "Sign in to access your cloud projects."}
+                <ProjectLibrary
+                  local={local}
+                  cloud={cloud}
+                  userId={user?.id}
+                  open={(load) => reopen(load)}
+                />
+                {!user && (
+                  <p className="library-hint">
+                    Sign in to include your private cloud projects.
                   </p>
                 )}
               </>

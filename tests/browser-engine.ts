@@ -1,3 +1,4 @@
+import { PlaylistPlayer } from "../src/lib/playlist";
 // Runs only in the isolated local test server; never included in the studio build.
 import { AudioEngine } from "../src/lib/audio";
 import { MicrophoneCapture } from "../src/lib/capture";
@@ -229,7 +230,49 @@ button.onclick = async () => {
       "Stereo meter cancels opposite-phase channels",
     );
     engine.stop();
-    status.textContent = `PASS — actual AudioWorklet capture → PCM WAV → decode → offline mix/export. Take: ${recorded.duration.toFixed(3)}s; RMS: ${rms.toFixed(4)}. All eight vocal/adlib presets changed rendered audio with finite samples. Ping-pong echoes alternate left/right at the expected times. Legacy mono/stereo levels are preserved with effects bypassed. Input selection, input metering, stereo mix metering and stopped-node cleanup passed. No microphone used.`;
+    bypass.clips[0].duration = 0.1;
+    const played: string[] = [];
+    await new Promise<void>((resolve, reject) => {
+      const timeout = setTimeout(
+        () => reject(new Error("Real audio playlist did not advance")),
+        10000,
+      );
+      const playlist = new PlaylistPlayer(
+        {
+          ready: async () => {
+            await engine.ready();
+          },
+          prepare: async (item) => {
+            played.push(item.id);
+          },
+          play: async (from, ended) => {
+            await engine.play(project, from, ended);
+          },
+          stop: () => engine.stop(),
+          time: () => engine.time(),
+        },
+        (state) => {
+          if (state.status === "ended") {
+            clearTimeout(timeout);
+            resolve();
+          }
+          if (state.status === "error") {
+            clearTimeout(timeout);
+            reject(new Error(state.error));
+          }
+        },
+      );
+      playlist.replace([
+        { id: "first", name: "First mix" },
+        { id: "second", name: "Second mix" },
+      ]);
+      void playlist.play();
+    });
+    check(
+      played.join(",") === "first,second",
+      "Actual audio completion did not sequence two songs",
+    );
+    status.textContent = `PASS — actual AudioWorklet capture → PCM WAV → decode → offline mix/export. Take: ${recorded.duration.toFixed(3)}s; RMS: ${rms.toFixed(4)}. All eight vocal/adlib presets changed rendered audio with finite samples. Ping-pong echoes alternate left/right at the expected times. Legacy mono/stereo levels are preserved with effects bypassed. Input selection, input metering, stereo mix metering and stopped-node cleanup passed. Two songs automatically advanced using actual audio completion events. No microphone used.`;
     status.dataset.passed = "true";
   } catch (error) {
     status.textContent = `FAIL — ${error instanceof Error ? error.message : String(error)}`;

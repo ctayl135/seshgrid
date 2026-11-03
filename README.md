@@ -41,6 +41,12 @@ Select a vocal track, then choose a sound in the channel strip's **UNDERGROUND**
 
 Settings are stored in an optional `fx` field in the existing version-1 track manifest. Older projects without this field stay dry, and save/reopen/portable backups preserve the new controls. Playback and offline export use the same effect graph. Echo feedback is bounded for stability and the exporter retains the decaying tail.
 
+## Projects and playlist
+
+Open Projects for the saved-song library. Search your projects, open one in the studio, or choose Play all. Queue adds individual songs; move songs up or remove them while playback is stopped. Pause/Resume, Next song and Stop control the playlist. The next song starts automatically after the current mix and its effects finish; the final song ends the playlist.
+
+Playback uses the saved source audio, edits and effects without replacing the current studio session or saving unsaved changes. The library combines browser saves and signed-in private cloud projects, showing the newer saved copy when the same project exists in both. Cloud songs load privately when needed. Loading can add a pause between songs; this is sequential playback, not gapless playback. Missing or empty projects report an error and can be skipped. Closing Projects stops playback and clears the temporary queue. Projects saved at another site address must be transferred with Backup → Open project file.
+
 ## Microphone and level meters
 
 Choose a microphone in Recording setup before recording, or keep System default. Refresh inputs updates the list without opening the microphone. Browsers may hide device names until Record is used and permission is granted. Input selection stays locked during playback, recording and busy operations. If a selected device disappears, recording reports the issue instead of silently using another input; reconnect it or choose System default.

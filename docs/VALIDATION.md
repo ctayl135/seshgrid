@@ -77,3 +77,10 @@ The recovery build is Ready at https://seshgrid-poi7dpjcb-ctayl135-6200-stripe.v
 - Corrected the integration test's echo window calculation to use the decoded buffer's sample rate, so it works with both 44.1 kHz and 48 kHz output devices.
 
 Meter build deployed Ready at https://seshgrid-mmpfvvvci-ctayl135-6200-stripe.vercel.app and assigned to the stable private lab alias. Reopened the previously saved Dark Trap Lead session at the lab address; audio, preset and mix settings persisted across the update. Hosted playback shows live mix levels and disables input changes. Vercel Authentication remains active; production alias was not changed.
+
+## Projects and playlist — November 3, 2026
+
+- All 25 tests pass, including automatic advance/end, pause position, stale completion cancellation, skipping during load, closing during load, queue uniqueness and recoverable loading errors. Production build, TypeScript and browser credential scan pass.
+- Real-browser audio integration sequenced two songs using scheduled audio completion events, including their effect tails. Existing capture, stereo meters, all eight presets and export checks still pass.
+- In the Projects view, queued two existing generated-audio projects, played to the final Playlist finished state, replayed from the first song and paused successfully. Playback leaves the editor session unchanged.
+- The playlist uses a separate audio engine, loads private cloud sources on demand and does not create public media URLs. Cloud access policies are unchanged. Queue order is temporary; gapless playback and background/mobile continuity are not promised.

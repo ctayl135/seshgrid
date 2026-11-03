@@ -237,6 +237,7 @@ export class AudioEngine {
       try {
         s.stop();
       } catch {}
+      s.onended = null;
       s.disconnect();
     });
     this.sources = [];
@@ -265,12 +266,26 @@ export class AudioEngine {
       Math.max(0, (this.context?.currentTime ?? 0) - this.started)
     );
   }
-  async play(p: Project, from: number) {
+  async play(p: Project, from: number, onEnded?: () => void) {
     const ctx = await this.ready();
     this.stop();
     this.position = from;
     try {
       this.started = this.schedule(ctx, p, from, true);
+      if (onEnded) {
+        const end = ctx.createBufferSource();
+        end.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+        end.connect(ctx.destination);
+        end.onended = () => {
+          this.stop();
+          onEnded();
+        };
+        this.sources.push(end);
+        end.start(
+          this.started +
+            Math.max(0, projectEnd(p) + effectTail(p.tracks) - from),
+        );
+      }
       return this.started;
     } catch (e) {
       this.stop();
