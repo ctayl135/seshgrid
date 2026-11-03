@@ -7,6 +7,7 @@
 - [x] Audio-clock scheduled multitrack playback and PCM microphone capture.
 - [x] Add tracks, repeat takes, move, trim, split and delete clips.
 - [x] Live volume, pan, mute, solo, shelf EQ and reverb.
+- [x] Eight underground vocal/adlib presets with adjustable filters, compression, saturation and stereo echo.
 - [x] Local project save/reopen and offline stereo WAV export.
 - [x] Portable project backups, restore, and independent session copies.
 - [x] Tests for PCM capture, WAV encoding, source edits, local persistence and backup integrity.

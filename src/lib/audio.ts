@@ -1,5 +1,6 @@
 import { audible, projectEnd, type Project, type Track } from "./model";
 import { encodeWav } from "./wav";
+import { trackEffects, effectTail } from "./presets";
 type Context = AudioContext | OfflineAudioContext;
 function impulse(ctx: Context) {
   const b = ctx.createBuffer(2, ctx.sampleRate * 1.5, ctx.sampleRate);
@@ -13,31 +14,198 @@ function impulse(ctx: Context) {
   }
   return b;
 }
-function channel(ctx: Context, t: Track, enabled: boolean, room: AudioBuffer) {
+type Channel = {
+  input: GainNode;
+  low: BiquadFilterNode;
+  high: BiquadFilterNode;
+  highpass: BiquadFilterNode;
+  lowpass: BiquadFilterNode;
+  compressor: DynamicsCompressorNode;
+  compressed: GainNode;
+  dryCompression: GainNode;
+  shape: WaveShaperNode;
+  driveGain: GainNode;
+  pan: StereoPannerNode;
+  wetPan: StereoPannerNode;
+  gain: GainNode;
+  wet: GainNode;
+  echoWet: GainNode;
+  left: DelayNode;
+  right: DelayNode;
+  leftPan: StereoPannerNode;
+  rightPan: StereoPannerNode;
+  leftFeedback: GainNode;
+  rightFeedback: GainNode;
+  nodes: AudioNode[];
+  driveAmount: number;
+};
+const curves = new Map<number, Float32Array<ArrayBuffer>>();
+function distortionCurve(amount: number) {
+  const key = Math.round(amount * 100);
+  let curve = curves.get(key);
+  if (curve) return curve;
+  const k = 1 + amount * 8;
+  curve = Float32Array.from(
+    { length: 4096 },
+    (_, i) => Math.tanh(k * ((i * 2) / 4095 - 1)) / Math.tanh(k),
+  );
+  curves.set(key, curve);
+  return curve;
+}
+function updateChannel(
+  ctx: Context,
+  c: Channel,
+  t: Track,
+  enabled: boolean,
+  live = false,
+) {
+  const fx = trackEffects(t),
+    set = (param: AudioParam, value: number) => {
+      if (live) param.setTargetAtTime(value, ctx.currentTime, 0.015);
+      else param.value = value;
+    };
+  set(c.gain.gain, enabled ? t.gain : 0);
+  set(c.pan.pan, t.pan);
+  set(c.wetPan.pan, t.pan);
+  set(c.low.gain, t.low);
+  set(c.high.gain, t.high);
+  set(c.wet.gain, t.reverb);
+  set(c.highpass.frequency, fx.highpass === 20 ? 0 : fx.highpass);
+  set(
+    c.lowpass.frequency,
+    fx.lowpass === 22000
+      ? ctx.sampleRate / 2
+      : Math.min(fx.lowpass, ctx.sampleRate / 2),
+  );
+  set(c.dryCompression.gain, fx.compression === 0 ? 1 : 0);
+  set(c.compressed.gain, fx.compression === 0 ? 0 : 1);
+  set(c.compressor.threshold, -12 - fx.compression * 20);
+  set(c.compressor.ratio, 1 + fx.compression * 7);
+  c.compressor.knee.value = 18;
+  c.compressor.attack.value = 0.006;
+  c.compressor.release.value = 0.13;
+  if (c.driveAmount !== fx.drive) {
+    c.shape.curve = fx.drive === 0 ? null : distortionCurve(fx.drive);
+    c.shape.oversample = fx.drive === 0 ? "none" : "2x";
+    c.driveAmount = fx.drive;
+  }
+  set(c.driveGain.gain, 1 / (1 + fx.drive * 1.5));
+  set(c.echoWet.gain, fx.delay);
+  set(c.left.delayTime, fx.delayTime);
+  set(c.right.delayTime, fx.delayTime);
+  set(c.leftFeedback.gain, fx.feedback);
+  set(c.rightFeedback.gain, fx.feedback);
+  set(c.leftPan.pan, Math.max(-1, t.pan - fx.width));
+  set(c.rightPan.pan, Math.min(1, t.pan + fx.width));
+}
+function channel(
+  ctx: Context,
+  t: Track,
+  enabled: boolean,
+  room: AudioBuffer,
+  inputChannels: number,
+): Channel {
   const input = ctx.createGain(),
     low = ctx.createBiquadFilter(),
     high = ctx.createBiquadFilter(),
+    highpass = ctx.createBiquadFilter(),
+    lowpass = ctx.createBiquadFilter(),
+    compressor = ctx.createDynamicsCompressor(),
+    compressed = ctx.createGain(),
+    dryCompression = ctx.createGain(),
+    shape = ctx.createWaveShaper(),
+    driveGain = ctx.createGain(),
     pan = ctx.createStereoPanner(),
     wetPan = ctx.createStereoPanner(),
     gain = ctx.createGain(),
     wet = ctx.createGain(),
-    verb = ctx.createConvolver();
+    verb = ctx.createConvolver(),
+    echoWet = ctx.createGain(),
+    left = ctx.createDelay(1),
+    right = ctx.createDelay(1),
+    leftPan = ctx.createStereoPanner(),
+    rightPan = ctx.createStereoPanner(),
+    leftFeedback = ctx.createGain(),
+    rightFeedback = ctx.createGain();
   low.type = "lowshelf";
+  // A zero-gain compressor branch must not upmix mono vocals before the panner.
+  compressor.channelCount = inputChannels;
+  compressor.channelCountMode = "clamped-max";
+  shape.channelCount = inputChannels;
+  shape.channelCountMode = "explicit";
   low.frequency.value = 200;
-  low.gain.value = t.low;
   high.type = "highshelf";
   high.frequency.value = 4000;
-  high.gain.value = t.high;
-  gain.gain.value = enabled ? t.gain : 0;
-  pan.pan.value = t.pan;
-  wetPan.pan.value = t.pan;
-  wet.gain.value = t.reverb;
+  highpass.type = "highpass";
+  highpass.Q.value = 0.707;
+  lowpass.type = "lowpass";
+  lowpass.Q.value = 0.707;
   verb.buffer = room;
-  input.connect(low).connect(high).connect(pan).connect(gain);
+  input.connect(highpass).connect(lowpass).connect(low).connect(high);
+  high.connect(dryCompression).connect(shape);
+  high.connect(compressor).connect(compressed).connect(shape);
+  shape.connect(driveGain);
+  driveGain.connect(pan).connect(gain);
+  driveGain.connect(verb).connect(wet).connect(wetPan).connect(gain);
+  // A real ping-pong loop: echoes alternate left/right and decay below unity.
+  driveGain.connect(left);
+  left.connect(leftPan).connect(echoWet);
+  left.connect(leftFeedback).connect(right);
+  right.connect(rightPan).connect(echoWet);
+  right.connect(rightFeedback).connect(left);
+  echoWet.connect(gain);
   gain.connect(ctx.destination);
-  // Pan dry mono audio before summing with the stereo room to avoid doubling it.
-  high.connect(verb).connect(wet).connect(wetPan).connect(gain);
-  return { input, gain, low, high, pan, wet, wetPan, verb };
+  const nodes = [
+    input,
+    low,
+    high,
+    highpass,
+    lowpass,
+    compressor,
+    compressed,
+    dryCompression,
+    shape,
+    driveGain,
+    pan,
+    wetPan,
+    gain,
+    wet,
+    verb,
+    echoWet,
+    left,
+    right,
+    leftPan,
+    rightPan,
+    leftFeedback,
+    rightFeedback,
+  ];
+  const c = {
+    input,
+    low,
+    high,
+    highpass,
+    lowpass,
+    compressor,
+    compressed,
+    dryCompression,
+    shape,
+    driveGain,
+    pan,
+    wetPan,
+    gain,
+    wet,
+    echoWet,
+    left,
+    right,
+    leftPan,
+    rightPan,
+    leftFeedback,
+    rightFeedback,
+    nodes,
+    driveAmount: -1,
+  };
+  updateChannel(ctx, c, t, enabled);
+  return c;
 }
 export class AudioEngine {
   context?: AudioContext;
@@ -66,9 +234,7 @@ export class AudioEngine {
       s.disconnect();
     });
     this.sources = [];
-    this.channels.forEach((c) =>
-      Object.values(c).forEach((n) => n.disconnect()),
-    );
+    this.channels.forEach((c) => c.nodes.forEach((n) => n.disconnect()));
     this.channels.clear();
   }
   time() {
@@ -93,12 +259,8 @@ export class AudioEngine {
     for (const t of p.tracks) {
       const c = this.channels.get(t.id);
       if (!c) continue;
-      c.gain.gain.value = audible(t, p.tracks) ? t.gain : 0;
-      c.pan.pan.value = t.pan;
-      c.wetPan.pan.value = t.pan;
-      c.low.gain.value = t.low;
-      c.high.gain.value = t.high;
-      c.wet.gain.value = t.reverb;
+      if (this.context)
+        updateChannel(this.context, c, t, audible(t, p.tracks), true);
     }
   }
   private schedule(ctx: Context, p: Project, from: number, live: boolean) {
@@ -110,7 +272,16 @@ export class AudioEngine {
         duration: number;
       }[] = [];
     for (const t of p.tracks) {
-      const c = channel(ctx, t, audible(t, p.tracks), room);
+      const inputChannels = Math.min(
+        2,
+        Math.max(
+          1,
+          ...t.clips.map(
+            (clip) => this.buffers.get(clip.assetId)?.numberOfChannels ?? 1,
+          ),
+        ),
+      );
+      const c = channel(ctx, t, audible(t, p.tracks), room, inputChannels);
       if (live) this.channels.set(t.id, c);
       for (const clip of t.clips) {
         const b = this.buffers.get(clip.assetId);
@@ -147,7 +318,7 @@ export class AudioEngine {
       );
     const ctx = new OfflineAudioContext(
       2,
-      Math.ceil((end + 1.5) * 44100),
+      Math.ceil((end + effectTail(p.tracks)) * 44100),
       44100,
     );
     this.schedule(ctx, p, 0, false);

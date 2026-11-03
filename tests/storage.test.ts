@@ -3,9 +3,10 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { newProject, newTrack } from "../src/lib/model";
 import { listLocal, saveLocal } from "../src/lib/storage";
+import { applyVocalPreset } from "../src/lib/presets";
 test("local saves commit audio and edits atomically and replace the same project", async () => {
   const project = newProject(),
-    track = newTrack("Lead"),
+    track = applyVocalPreset(newTrack("Lead"), "cloud-float"),
     id = crypto.randomUUID();
   track.clips = [
     { id: crypto.randomUUID(), assetId: id, start: 3, offset: 1, duration: 2 },

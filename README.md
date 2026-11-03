@@ -15,12 +15,27 @@ For a real-browser audio integration test without microphone permission, run `no
 3. Click the ruler while stopped to position the cursor. Play/pause or return to start. Select a clip to edit its start, source trim-in, and duration in seconds. Split at the cursor or delete a clip. Edits preserve original audio.
 4. Select a track to change its name, volume, stereo pan, low/high shelf EQ and reverb. Mute/solo are included in playback and export. Multiple clips on a track can overlap and sum.
 5. Name the session and click Save. Without an account, this commits audio and metadata to IndexedDB in this browser. With an account, it also saves privately to Supabase. A failed cloud save leaves the local copy intact and reports the error.
-6. Open Projects, choose a saved session and reopen it, including audio and mix settings. Export WAV produces a 44.1 kHz 16-bit stereo mix plus a 1.5 second effect tail.
+6. Open Projects, choose a saved session and reopen it, including audio and mix settings. Export WAV produces a 44.1 kHz 16-bit stereo mix with an effect tail of at least 1.5 seconds; echo feedback extends the tail automatically.
 7. Use Backup to download a `.sesh` project containing source audio and all edits. Projects → Open project file restores it on another browser or after clearing browser storage. Downloading a backup does not mark browser/cloud changes saved. Projects → Duplicate session makes an independent copy for the next save.
 
 Save reports success only after a local transaction or cloud commit finishes. Local storage operations time out rather than locking the studio forever. If both destinations fail, a backup download is started and the studio reports the failure; keep that file. In-app confirmations protect unsaved work when switching sessions. The timeline's Cursor field also supports precise, keyboard-accessible split positions.
 
 Microphone recording uses an AudioWorklet producing lossless mono PCM WAV, aligned to the same audio clock as backing-track scheduling. Hardware input/output latency varies; adjust the clip Start field after recording when needed. Monitoring is deliberately disabled to avoid feedback. Tempo guides session metadata; this version does not stretch audio or provide a metronome.
+
+## Underground vocal and adlib presets
+
+Select a vocal track, then choose a sound in the channel strip's **UNDERGROUND** preset selector. Presets apply immediately during playback and are included in WAV exports.
+
+| Lead vocals | Adlibs and backing vocals |
+| --- | --- |
+| Dark Trap Lead — warm, controlled, short slap | Wide Doubles — short, wide stereo repeats |
+| Rage Cut — bright compression and crunchy drive | Ping-Pong Throws — alternating left/right echo |
+| Cloud Float — airy vocal, hazy room and echoes | Ghost Whisper — dark, thin and distant |
+| Lo-Fi Phone — narrow, dusty phone-like tone | Basement Shout — compressed, dirty saturation |
+
+**Shape this sound** opens adjustable low/high cuts, compression, drive, echo mix/time/feedback and echo width. Existing EQ/reverb controls remain available. Changing a parameter marks the sound as Custom settings. **Reset FX** returns the track to dry processing. Presets and reset preserve track volume, pan, mute/solo, clip edits and original recordings. Effects are not baked into microphone source files. Pitch stays as recorded; these are tone, dynamics and ambience presets rather than pitch correction.
+
+Settings are stored in an optional `fx` field in the existing version-1 track manifest. Older projects without this field stay dry, and save/reopen/portable backups preserve the new controls. Playback and offline export use the same effect graph. Echo feedback is bounded for stability and the exporter retains the decaying tail.
 
 ## Supabase setup (required for accounts and cloud projects)
 

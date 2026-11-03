@@ -25,6 +25,8 @@ import {
 import { MicrophoneCapture } from "@/lib/capture";
 import { packSession, unpackSession } from "@/lib/portable";
 import Waveform from "./Waveform";
+import VocalRack from "./VocalRack";
+import { effectTail } from "@/lib/presets";
 const PX = 32;
 const clock = (n: number) =>
   `${Math.floor(n / 60)
@@ -109,7 +111,10 @@ export default function Studio() {
     const tick = () => {
       const time = engine.current!.time();
       setPosition(time);
-      if (!recordFlag.current && time >= projectEnd(latest.current!) + 1.5) {
+      if (
+        !recordFlag.current &&
+        time >= projectEnd(latest.current!) + effectTail(latest.current!.tracks)
+      ) {
         engine.current?.stop();
         transportFlag.current = false;
         setPlaying(false);
@@ -811,6 +816,11 @@ export default function Studio() {
                   Solo
                 </button>
               </div>
+              <VocalRack
+                track={track}
+                disabled={busy}
+                update={(patch) => patchTrack(track.id, patch)}
+              />
               {(
                 [
                   [

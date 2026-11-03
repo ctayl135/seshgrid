@@ -2,6 +2,11 @@
 import { AudioEngine } from "../src/lib/audio";
 import { MicrophoneCapture } from "../src/lib/capture";
 import { newProject, newTrack } from "../src/lib/model";
+import {
+  applyVocalPreset,
+  VOCAL_PRESETS,
+  DRY_EFFECTS,
+} from "../src/lib/presets";
 const status = document.querySelector<HTMLOutputElement>("#result")!;
 const button = document.querySelector<HTMLButtonElement>("#run")!;
 const check = (value: boolean, message: string) => {
@@ -79,9 +84,100 @@ button.onclick = async () => {
         .reduce((n, sample) => Math.max(n, Math.abs(sample)), 0);
     check(
       peak(0) < 0.0001 && peak(1) > 0.04 && peak(1) < 0.06,
-      "Export does not preserve capture, gain or pan",
+      `Export does not preserve capture, gain or pan (L=${peak(0)}, R=${peak(1)})`,
     );
-    status.textContent = `PASS — actual AudioWorklet capture → PCM WAV → decode → offline mix/export. Take: ${recorded.duration.toFixed(3)}s; RMS: ${rms.toFixed(4)}; exported at 44.1 kHz / 16-bit stereo. Right peak: ${peak(1).toFixed(4)}; left peak: ${peak(0).toFixed(4)}. No microphone used.`;
+    const dry = mixed.getChannelData(1);
+    for (const preset of VOCAL_PRESETS) {
+      project.tracks = [applyVocalPreset(track, preset.id)];
+      const rendered = await context.decodeAudioData(
+        await (await engine.export(project)).arrayBuffer(),
+      );
+      const data = rendered.getChannelData(1);
+      check(
+        data.every(Number.isFinite),
+        `${preset.name} produced invalid samples`,
+      );
+      check(
+        data.some((x, i) => Math.abs(x - (dry[i] ?? 0)) > 0.001),
+        `${preset.name} did not change the rendered audio`,
+      );
+    }
+    // Verify real alternating echo positions independently of preset tonal changes.
+    const hit = context.createBuffer(1, 4410, 44100);
+    hit.getChannelData(0)[0] = 0.2;
+    const hitId = crypto.randomUUID();
+    engine.buffers.set(hitId, hit);
+    const echo = newTrack("Echo routing");
+    echo.fx = {
+      ...DRY_EFFECTS,
+      delay: 0.5,
+      delayTime: 0.05,
+      feedback: 0.5,
+      width: 1,
+    };
+    echo.clips = [
+      {
+        id: crypto.randomUUID(),
+        assetId: hitId,
+        start: 0,
+        offset: 0,
+        duration: 0.1,
+      },
+    ];
+    project.tracks = [echo];
+    const echoes = await context.decodeAudioData(
+      await (await engine.export(project)).arrayBuffer(),
+    );
+    const windowPeak = (channel: number, time: number) =>
+      echoes
+        .getChannelData(channel)
+        .slice(
+          Math.floor((time - 0.004) * 44100),
+          Math.ceil((time + 0.004) * 44100),
+        )
+        .reduce((m, v) => Math.max(m, Math.abs(v)), 0);
+    check(
+      windowPeak(0, 0.05) > 0.04 && windowPeak(1, 0.05) < 0.001,
+      "First echo is not isolated left",
+    );
+    check(
+      windowPeak(1, 0.1) > 0.015 && windowPeak(0, 0.1) < 0.001,
+      "Second echo is not isolated right",
+    );
+    const stereo = context.createBuffer(2, 4410, 44100);
+    for (let i = 0; i < 4410; i++) {
+      stereo.getChannelData(0)[i] =
+        0.2 * Math.sin((2 * Math.PI * 440 * i) / 44100);
+      stereo.getChannelData(1)[i] =
+        0.1 * Math.sin((2 * Math.PI * 880 * i) / 44100);
+    }
+    const stereoId = crypto.randomUUID();
+    engine.buffers.set(stereoId, stereo);
+    const bypass = newTrack("Legacy stereo");
+    bypass.gain = 0.5;
+    bypass.clips = [
+      {
+        id: crypto.randomUUID(),
+        assetId: stereoId,
+        start: 0,
+        offset: 0,
+        duration: 0.1,
+      },
+    ];
+    project.tracks = [bypass];
+    const unchanged = await context.decodeAudioData(
+        await (await engine.export(project)).arrayBuffer(),
+      ),
+      stereoPeak = (channel: number) =>
+        unchanged
+          .getChannelData(channel)
+          .reduce((m, v) => Math.max(m, Math.abs(v)), 0);
+    check(
+      Math.abs(stereoPeak(0) - 0.1) < 0.001 &&
+        Math.abs(stereoPeak(1) - 0.05) < 0.001,
+      "Legacy stereo audio was altered by bypassed effects",
+    );
+    status.textContent = `PASS — actual AudioWorklet capture → PCM WAV → decode → offline mix/export. Take: ${recorded.duration.toFixed(3)}s; RMS: ${rms.toFixed(4)}. All eight vocal/adlib presets changed rendered audio with finite samples. Ping-pong echoes alternate left/right at the expected times. Legacy mono/stereo levels are preserved with effects bypassed. No microphone used.`;
     status.dataset.passed = "true";
   } catch (error) {
     status.textContent = `FAIL — ${error instanceof Error ? error.message : String(error)}`;

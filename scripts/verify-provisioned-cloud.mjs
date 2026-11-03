@@ -39,6 +39,7 @@ try {
   const storage = await import("../src/lib/storage.ts");
   const { newProject, newTrack } = await import("../src/lib/model.ts");
   const { encodeWav } = await import("../src/lib/wav.ts");
+  const { applyVocalPreset } = await import("../src/lib/presets.ts");
   studio = storage.supabase;
   const signedIn = await studio.auth.signInWithPassword({
     email: accounts[0].email,
@@ -61,6 +62,7 @@ try {
   track.pan = -0.25;
   track.reverb = 0.1;
   project.tracks = [track];
+  Object.assign(track, applyVocalPreset(track, "ping-pong"));
   audioPath = `${accounts[0].id}/${project.id}/${assetId}`;
   const session = { project, assets: [{ id: assetId, blob }] };
   await storage.saveCloud(session, accounts[0].id);

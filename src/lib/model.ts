@@ -1,3 +1,4 @@
+import type { VocalEffects } from "./presets";
 export type Clip = {
   id: string;
   assetId: string;
@@ -15,6 +16,7 @@ export type Track = {
   low: number;
   high: number;
   reverb: number;
+  fx?: VocalEffects;
   clips: Clip[];
 };
 export type Project = {
@@ -108,6 +110,21 @@ export function validateProject(value: unknown): Project {
     )
       throw new Error("Invalid track");
     ids.add(t.id);
+    if (t.fx !== undefined) {
+      const fx = t.fx;
+      if (
+        !fx ||
+        !finite(fx.highpass, 20, 1500) ||
+        !finite(fx.lowpass, 2000, 22000) ||
+        !finite(fx.compression, 0, 1) ||
+        !finite(fx.drive, 0, 1) ||
+        !finite(fx.delay, 0, 1) ||
+        !finite(fx.delayTime, 0.025, 0.75) ||
+        !finite(fx.feedback, 0, 0.65) ||
+        !finite(fx.width, 0, 1)
+      )
+        throw new Error("Invalid vocal effects");
+    }
     if (t.clips.length > 10000) throw new Error("Too many clips");
     for (const c of t.clips) {
       if (
