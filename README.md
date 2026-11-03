@@ -39,6 +39,14 @@ Select a vocal track, then choose a sound in the channel strip's **UNDERGROUND**
 
 Settings are stored in an optional `fx` field in the existing version-1 track manifest. Older projects without this field stay dry, and save/reopen/portable backups preserve the new controls. Playback and offline export use the same effect graph. Echo feedback is bounded for stability and the exporter retains the decaying tail.
 
+## Undo and local recovery
+
+Use the arrangement Undo/Redo buttons, Ctrl/Command Z, Ctrl/Command Shift Z, or Ctrl Y. History retains up to 60 edits, including takes, clip edits, track deletion and preset changes. Rapid changes to one control are grouped. History resets when opening or creating a session; it is not saved in project files.
+
+After edits pause for 1.5 seconds, the studio writes a separate recovery checkpoint with its source audio to this browser. Recording and other busy operations pause checkpointing. Returning to the same studio URL offers Restore draft; earlier drafts are also in Projects. Restoration remains unsaved until you click Save. A successful explicit save clears that session's recovery drafts without replacing other tabs' work.
+
+Recovery is best effort and local to this browser and exact site address. Closing before the checkpoint finishes, clearing browser storage, private browsing or storage failure can lose unsaved changes. Save and download backups regularly. Cloud saving remains explicit.
+
 ## Supabase setup (required for accounts and cloud projects)
 
 The SeshGrid workspace now has a provisioned Supabase Free project. Its owner-only project policies and private audio bucket are applied. Live cross-account privacy and sign-in/save/reopen checks passed. CLI-managed credentials stay in ignored local configuration; they are not part of the repository.
@@ -59,7 +67,7 @@ For a fully automated integration check on this newly provisioned project, run `
 
 **Before public sign-ups:** configure custom SMTP and verify confirmation-email delivery. The built-in Supabase sender is restricted to organization-team addresses, so enabling email/password sign-up alone does not enable registration for every musician. Keep email confirmation enabled. See https://supabase.com/docs/guides/auth/auth-smtp. Auth redirect URLs also need to match the deployed studio domain.
 
-Cloud object paths are `user-id/project-id/asset-id`. Original assets are immutable. Each save uploads referenced audio first, then commits the manifest. Failed uploads cannot replace the previous cloud manifest. Orphaned files from partial saves/deleted clips are retained for recovery; future maintenance should implement owner-authorized garbage collection. Saving is explicit; there is no autosave or multi-device conflict resolution yet (last completed cloud save wins).
+Cloud object paths are `user-id/project-id/asset-id`. Original assets are immutable. Each save uploads referenced audio first, then commits the manifest. Failed uploads cannot replace the previous cloud manifest. Orphaned files from partial saves/deleted clips are retained for recovery; future maintenance should implement owner-authorized garbage collection. Saving is explicit; cloud autosave and multi-device conflict resolution are not implemented (last completed cloud save wins).
 
 ## Deploy through Vercel
 

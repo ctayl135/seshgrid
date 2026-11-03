@@ -59,3 +59,10 @@ The user approved the first protected Production-labeled build. Deployment `dpl_
 ## Repository
 
 Source and CI are pushed to the private `ctayl135/seshgrid` GitHub repository. GitHub Actions passed on the implementation commits. No provider credentials, recorded user audio, generated test fixtures, or local project backups are tracked.
+
+## Undo and recovery checks — November 3, 2026
+
+- All 20 tests pass, including bounded/grouped history, redo invalidation, independent-tab drafts, failed-checkpoint preservation and source audio round trips. TypeScript, production build and client credential scan pass.
+- In the real browser, uploaded generated test audio, applied Ping-Pong Throws, undid to dry and redid to the preset. A fresh studio instance offered the unsaved draft and restored its title, track, preset and source audio.
+- Recovered audio exported as a non-silent 44.1 kHz, 16-bit stereo WAV. Explicit Save succeeded; a fresh studio instance no longer offered the saved recovery draft. User recordings were not used in these tests.
+- Recovery is separate from manual saves and cloud storage. History is session-only; checkpoints wait for recording/busy operations to finish. Sudden shutdown before a checkpoint and broader device interruptions remain limitations.

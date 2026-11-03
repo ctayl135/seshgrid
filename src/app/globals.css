@@ -1009,3 +1009,85 @@ footer > span:last-child {
     scrollbar-color: #48533e #191a1f;
   }
 }
+.arrangement-tools {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.arrangement-tools > span {
+  font-size: 10px;
+  color: #7f8796;
+  white-space: nowrap;
+}
+.history-buttons {
+  display: flex;
+  gap: 5px;
+}
+.history-buttons button {
+  padding: 4px 9px;
+  font-size: 19px;
+  line-height: 24px;
+  background: #202329;
+  border-color: #343b44;
+}
+.recovery-banner {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 18px;
+  background: #25301f;
+  border-bottom: 1px solid #485c38;
+}
+.recovery-banner > div {
+  flex: 1;
+  min-width: 0;
+}
+.recovery-banner b {
+  display: block;
+  font-size: 11px;
+  color: #d3efb4;
+}
+.recovery-banner span {
+  display: block;
+  color: #a6b89a;
+  font-size: 10px;
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recovery-banner button {
+  font-size: 10px;
+  white-space: nowrap;
+  background: #35442b;
+  border-color: #586b44;
+}
+.recovery-warning {
+  padding: 10px 18px;
+  font-size: 10px;
+  color: #ecd8a7;
+  background: #3b3321;
+}
+.recovery-row {
+  border-color: #576a40;
+  background: #293322;
+}
+@media (max-width: 760px) {
+  .arrangement-tools {
+    gap: 8px;
+  }
+  .arrangement-tools > span {
+    font-size: 9px;
+  }
+  .history-buttons button {
+    padding: 3px 7px;
+  }
+  .recovery-banner {
+    padding: 10px;
+    gap: 6px;
+  }
+  .recovery-banner button {
+    font-size: 9px;
+    padding: 7px;
+  }
+}

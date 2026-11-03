@@ -27,6 +27,9 @@ import { packSession, unpackSession } from "@/lib/portable";
 import Waveform from "./Waveform";
 import VocalRack from "./VocalRack";
 import { effectTail } from "@/lib/presets";
+import { useProjectEditor } from "./useProjectEditor";
+import { useSessionRecovery } from "./useSessionRecovery";
+import { loadRecovery } from "@/lib/recovery";
 const PX = 32;
 const clock = (n: number) =>
   `${Math.floor(n / 60)
@@ -41,8 +44,10 @@ function download(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
 export default function Studio() {
-  const [project, setProject] = useState<Project | null>(null),
-    [selected, select] = useState<string>(""),
+  const editor = useProjectEditor(),
+    project = editor.project,
+    setProject = editor.reset;
+  const [selected, select] = useState<string>(""),
     [clipId, selectClip] = useState(""),
     [position, setPosition] = useState(0),
     [playing, setPlaying] = useState(false),
@@ -80,6 +85,12 @@ export default function Studio() {
     recordFlag = useRef(false),
     transportFlag = useRef(false);
   latest.current = project;
+  const recovery = useSessionRecovery(
+    project,
+    dirty,
+    busy || recording,
+    assets,
+  );
   useEffect(() => {
     engine.current = new AudioEngine();
     setProject(newProject());
@@ -126,23 +137,95 @@ export default function Studio() {
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
   }, [playing]);
-  const edit = (fn: (p: Project) => Project) => {
-    setProject((p) => (p ? fn(p) : p));
+  const edit = (fn: (p: Project) => Project, group?: string) => {
+    editor.edit(fn, group);
     setDirty(true);
   };
-  const patchTrack = (id: string, patch: Partial<Track>) =>
-    edit((p) => ({
-      ...p,
-      tracks: p.tracks.map((t) => (t.id === id ? { ...t, ...patch } : t)),
-    }));
-  const patchClip = (id: string, fn: (c: Clip) => Clip) =>
-    edit((p) => ({
-      ...p,
-      tracks: p.tracks.map((t) => ({
-        ...t,
-        clips: t.clips.map((c) => (c.id === id ? fn(c) : c)),
-      })),
-    }));
+  const patchTrack = (id: string, patch: Partial<Track>) => {
+    const keys = Object.keys(patch);
+    let group = keys.length === 1 ? `track:${id}:${keys[0]}` : undefined;
+    if (keys[0] === "fx" && patch.fx) {
+      const before = latest.current?.tracks.find((t) => t.id === id)?.fx;
+      const changed = Object.keys(patch.fx).filter(
+        (k) =>
+          patch.fx![k as keyof typeof patch.fx] !==
+          before?.[k as keyof typeof before],
+      );
+      group = changed.length === 1 ? `track:${id}:fx:${changed[0]}` : undefined;
+    }
+    edit(
+      (p) => ({
+        ...p,
+        tracks: p.tracks.map((t) => (t.id === id ? { ...t, ...patch } : t)),
+      }),
+      group,
+    );
+  };
+  const patchClip = (id: string, fn: (c: Clip) => Clip) => {
+    const before = latest.current?.tracks
+      .flatMap((t) => t.clips)
+      .find((c) => c.id === id);
+    if (!before) return;
+    const next = fn(before),
+      changed = Object.keys(next)
+        .filter((k) => next[k as keyof Clip] !== before[k as keyof Clip])
+        .sort()
+        .join(",");
+    edit(
+      (p) => ({
+        ...p,
+        tracks: p.tracks.map((t) => ({
+          ...t,
+          clips: t.clips.map((c) => (c.id === id ? next : c)),
+        })),
+      }),
+      `clip:${id}:${changed}`,
+    );
+  };
+  const historyAction = (kind: "undo" | "redo") => {
+    if (
+      busy ||
+      recordFlag.current ||
+      transportFlag.current ||
+      modal ||
+      confirmation ||
+      (kind === "undo" ? !editor.canUndo : !editor.canRedo)
+    )
+      return;
+    const next = kind === "undo" ? editor.undo() : editor.redo();
+    if (!next) return;
+    setDirty(true);
+    if (!next.tracks.some((t) => t.id === selected))
+      select(next.tracks[0]?.id ?? "");
+    if (!next.tracks.some((t) => t.clips.some((c) => c.id === clipId)))
+      selectClip("");
+    setMessage(kind === "undo" ? "Last edit undone." : "Edit restored.");
+  };
+  useEffect(() => {
+    const key = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (
+        target?.closest('input,textarea,select,[contenteditable="true"]') ||
+        modal ||
+        confirmation ||
+        busy ||
+        playing ||
+        recording ||
+        (!event.ctrlKey && !event.metaKey) ||
+        event.altKey
+      )
+        return;
+      if (event.key.toLowerCase() === "z") {
+        event.preventDefault();
+        historyAction(event.shiftKey ? "redo" : "undo");
+      } else if (event.key.toLowerCase() === "y") {
+        event.preventDefault();
+        historyAction("redo");
+      }
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  });
   const run = async (fn: () => Promise<void>) => {
     setBusy(true);
     setError("");
@@ -311,8 +394,9 @@ export default function Studio() {
           "Saving to browser/cloud failed. A project backup download was started. Keep it and reopen using Open project file.",
         );
       }
-      setProject(session.project);
+      editor.saved(session.project);
       setDirty(false);
+      await recovery.clear().catch(() => {});
       setMessage(
         cloudOK
           ? `Saved privately to the cloud${localOK ? " and this browser" : ""}.`
@@ -329,6 +413,7 @@ export default function Studio() {
       const results = await Promise.allSettled([
         listLocal(),
         user ? listCloud() : Promise.resolve([]),
+        recovery.refresh(),
       ]);
       if (results[0].status === "fulfilled") setLocal(results[0].value);
       if (results[1].status === "fulfilled") setCloud(results[1].value);
@@ -339,7 +424,7 @@ export default function Studio() {
         );
     });
   };
-  const reopen = (get: () => Promise<SavedSession>) =>
+  const reopen = (get: () => Promise<SavedSession>, recoveryId?: string) =>
     run(async () => {
       if (
         dirty &&
@@ -365,13 +450,19 @@ export default function Studio() {
       await engine.current?.context?.close();
       engine.current = next;
       assets.current = new Map(session.assets.map((a) => [a.id, a.blob]));
+      await recovery.clear(recoveryId).catch(() => {});
       setProject(p);
       select(p.tracks[0]?.id ?? "");
       selectClip("");
       setPosition(0);
-      setDirty(false);
+      setDirty(!!recoveryId);
+      if (recoveryId) recovery.adopt(recoveryId);
       setModal(null);
-      setMessage("Project reopened with source audio and mix settings.");
+      setMessage(
+        recoveryId
+          ? "Recovered unsaved session. Save when you are ready."
+          : "Project reopened with source audio and mix settings.",
+      );
     });
   if (!project) return <main className="loading">Opening SeshGrid…</main>;
   const track = project.tracks.find((t) => t.id === selected),
@@ -426,9 +517,21 @@ export default function Studio() {
             maxLength={200}
             value={project.name}
             disabled={locked}
-            onChange={(e) => edit((p) => ({ ...p, name: e.target.value }))}
+            onChange={(e) =>
+              edit((p) => ({ ...p, name: e.target.value }), "project:name")
+            }
           />
-          <span>{dirty ? "Unsaved changes" : "Ready to create"}</span>
+          <span role="status">
+            {dirty
+              ? recovery.status === "saved"
+                ? "Unsaved · recovery saved"
+                : recovery.status === "saving"
+                  ? "Unsaved · saving recovery"
+                  : recovery.status === "unavailable"
+                    ? "Unsaved · recovery unavailable"
+                    : "Unsaved changes"
+              : "Ready to create"}
+          </span>
         </div>
         <div className="header-actions">
           <button disabled={locked} onClick={openProjects}>
@@ -592,14 +695,65 @@ export default function Studio() {
           </div>
         </aside>
         <section className="arrangement">
+          {recovery.showBanner && recovery.drafts.length > 0 && (
+            <div className="recovery-banner" role="status">
+              <div>
+                <b>Unsaved session found</b>
+                <span>
+                  {recovery.drafts[0].name} ·{" "}
+                  {new Date(recovery.drafts[0].savedAt).toLocaleString()}
+                </span>
+              </div>
+              <button
+                disabled={locked}
+                onClick={() =>
+                  reopen(
+                    () => loadRecovery(recovery.drafts[0].id),
+                    recovery.drafts[0].id,
+                  )
+                }
+              >
+                Restore draft
+              </button>
+              <button disabled={locked} onClick={recovery.dismiss}>
+                Later
+              </button>
+            </div>
+          )}
+          {dirty && recovery.status === "unavailable" && (
+            <div className="recovery-warning" role="status">
+              Automatic recovery is unavailable. Use Save or download a project
+              backup.
+            </div>
+          )}
           <div className="arrangement-heading">
             <div>
               <span className="eyebrow">WORKSPACE</span>
               <h2>Arrangement</h2>
             </div>
-            <span>
-              {project.tracks.length} tracks · {clock(projectEnd(project))}
-            </span>
+            <div className="arrangement-tools">
+              <div className="history-buttons">
+                <button
+                  aria-label="Undo"
+                  title="Undo (Ctrl/⌘ Z)"
+                  disabled={locked || !editor.canUndo}
+                  onClick={() => historyAction("undo")}
+                >
+                  ↶
+                </button>
+                <button
+                  aria-label="Redo"
+                  title="Redo (Ctrl/⌘ Shift Z or Ctrl Y)"
+                  disabled={locked || !editor.canRedo}
+                  onClick={() => historyAction("redo")}
+                >
+                  ↷
+                </button>
+              </div>
+              <span>
+                {project.tracks.length} tracks · {clock(projectEnd(project))}
+              </span>
+            </div>
           </div>
           <div className="timeline-scroll">
             <div style={{ width }} className="timeline">
@@ -1082,6 +1236,7 @@ export default function Studio() {
                     if (dirty && !(await ask("Discard unsaved changes?")))
                       return;
                     stop();
+                    void recovery.clear().catch(() => {});
                     assets.current.clear();
                     engine.current!.buffers.clear();
                     setProject(newProject());
@@ -1094,6 +1249,26 @@ export default function Studio() {
                 >
                   ＋ New session
                 </button>
+                <h3>Unsaved recovery drafts</h3>
+                {recovery.drafts.length ? (
+                  recovery.drafts.map((d) => (
+                    <button
+                      className="project-row recovery-row"
+                      key={d.id}
+                      disabled={busy}
+                      aria-label={`Recover ${d.name}`}
+                      onClick={() => reopen(() => loadRecovery(d.id), d.id)}
+                    >
+                      {d.name}
+                      <small>
+                        {new Date(d.savedAt).toLocaleString()} · {d.tracks}{" "}
+                        tracks
+                      </small>
+                    </button>
+                  ))
+                ) : (
+                  <p>No recovery drafts from earlier sessions.</p>
+                )}
                 <h3>On this browser</h3>
                 {local.length ? (
                   local.map((s) => (
