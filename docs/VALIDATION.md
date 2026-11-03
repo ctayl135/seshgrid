@@ -84,3 +84,5 @@ Meter build deployed Ready at https://seshgrid-mmpfvvvci-ctayl135-6200-stripe.ve
 - Real-browser audio integration sequenced two songs using scheduled audio completion events, including their effect tails. Existing capture, stereo meters, all eight presets and export checks still pass.
 - In the Projects view, queued two existing generated-audio projects, played to the final Playlist finished state, replayed from the first song and paused successfully. Playback leaves the editor session unchanged.
 - The playlist uses a separate audio engine, loads private cloud sources on demand and does not create public media URLs. Cloud access policies are unchanged. Queue order is temporary; gapless playback and background/mobile continuity are not promised.
+
+Projects playlist build is Ready at https://seshgrid-8npx5vubb-ctayl135-6200-stripe.vercel.app and the stable private lab alias. Hosted library retained the previous saved project; search and Play all passed. The existing studio session stayed untouched. Vercel Authentication remains active for all deployments.
