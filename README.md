@@ -41,6 +41,12 @@ Select a vocal track, then choose a sound in the channel strip's **UNDERGROUND**
 
 Settings are stored in an optional `fx` field in the existing version-1 track manifest. Older projects without this field stay dry, and save/reopen/portable backups preserve the new controls. Playback and offline export use the same effect graph. Echo feedback is bounded for stability and the exporter retains the decaying tail.
 
+## Microphone and level meters
+
+Choose a microphone in Recording setup before recording, or keep System default. Refresh inputs updates the list without opening the microphone. Browsers may hide device names until Record is used and permission is granted. Input selection stays locked during playback, recording and busy operations. If a selected device disappears, recording reports the issue instead of silently using another input; reconnect it or choose System default.
+
+Input shows the raw mono signal being captured while recording. Mix measures the louder of the stereo output channels after track volume and effects during playback. A sampled peak near 0 dBFS holds a red CLIP warning for two seconds. Lower your microphone/interface gain for input clipping, or track volumes for mix clipping. Vocal presets cannot repair already clipped input. These are sampled peak meters, not true-peak or loudness meters; brief peaks may be missed. Input is never monitored through the speakers. Device choice is kept only in the current studio tab and is not included in cloud projects.
+
 ## Undo and local recovery
 
 Use the arrangement Undo/Redo buttons, Ctrl/Command Z, Ctrl/Command Shift Z, or Ctrl Y. History retains up to 60 edits, including takes, clip edits, track deletion and preset changes. Rapid changes to one control are grouped. History resets when opening or creating a session; it is not saved in project files.

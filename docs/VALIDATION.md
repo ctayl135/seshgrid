@@ -68,3 +68,10 @@ Source and CI are pushed to the private `ctayl135/seshgrid` GitHub repository. G
 - Recovery is separate from manual saves and cloud storage. History is session-only; checkpoints wait for recording/busy operations to finish. Sudden shutdown before a checkpoint and broader device interruptions remain limitations.
 
 The recovery build is Ready at https://seshgrid-poi7dpjcb-ctayl135-6200-stripe.vercel.app. Stable private test alias: https://seshgrid-lab-ctayl135-6200-stripe.vercel.app (Vercel Authentication remains enabled for all deployments). Hosted audio import, preset undo/redo and local save passed. Production alias was not changed.
+
+## Input selection and peak meters — November 3, 2026
+
+- All 21 automated tests pass. TypeScript, production build and client credential scan pass.
+- Real-browser oscillator capture verifies that the selected device constraint reaches getUserMedia, the input meter measures raw audio, the mix meter measures post-fader stereo peaks, and stopping releases metering nodes. Opposite-phase stereo channels remain visible on the mix meter. All eight preset renders, echo positions and WAV output remain correct.
+- Browser UI shows the selected default input, refresh control, idle input meter and live mix levels during generated-beat playback. Input selection is disabled during playback. No real microphone permission or user recordings were used in this update's tests. Physical multi-device switching still needs hardware testing.
+- Corrected the integration test's echo window calculation to use the decoded buffer's sample rate, so it works with both 44.1 kHz and 48 kHz output devices.

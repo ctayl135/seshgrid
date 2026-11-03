@@ -1,3 +1,4 @@
+import { samplePeak } from "./meter";
 import { audible, projectEnd, type Project, type Track } from "./model";
 import { encodeWav } from "./wav";
 import { trackEffects, effectTail } from "./presets";
@@ -104,6 +105,7 @@ function channel(
   enabled: boolean,
   room: AudioBuffer,
   inputChannels: number,
+  destination: AudioNode = ctx.destination,
 ): Channel {
   const input = ctx.createGain(),
     low = ctx.createBiquadFilter(),
@@ -154,7 +156,7 @@ function channel(
   right.connect(rightPan).connect(echoWet);
   right.connect(rightFeedback).connect(left);
   echoWet.connect(gain);
-  gain.connect(ctx.destination);
+  gain.connect(destination);
   const nodes = [
     input,
     low,
@@ -212,6 +214,10 @@ export class AudioEngine {
   buffers = new Map<string, AudioBuffer>();
   private sources: AudioBufferSourceNode[] = [];
   private channels = new Map<string, ReturnType<typeof channel>>();
+  private analysers: AnalyserNode[] = [];
+  private master?: GainNode;
+  private meterSplit?: ChannelSplitterNode;
+  private meterSamples?: Float32Array<ArrayBuffer>;
   private started = 0;
   private position = 0;
   async ready() {
@@ -236,6 +242,22 @@ export class AudioEngine {
     this.sources = [];
     this.channels.forEach((c) => c.nodes.forEach((n) => n.disconnect()));
     this.channels.clear();
+    this.analysers.forEach((a) => a.disconnect());
+    this.analysers = [];
+    this.master?.disconnect();
+    this.meterSplit?.disconnect();
+    this.master = undefined;
+    this.meterSplit = undefined;
+    this.meterSamples = undefined;
+  }
+  peak() {
+    if (!this.meterSamples) return 0;
+    let peak = 0;
+    for (const analyser of this.analysers) {
+      analyser.getFloatTimeDomainData(this.meterSamples);
+      peak = Math.max(peak, samplePeak(this.meterSamples));
+    }
+    return peak;
   }
   time() {
     return (
@@ -264,6 +286,20 @@ export class AudioEngine {
     }
   }
   private schedule(ctx: Context, p: Project, from: number, live: boolean) {
+    let destination: AudioNode = ctx.destination;
+    if (live) {
+      this.master = ctx.createGain();
+      this.master.connect(ctx.destination);
+      this.meterSplit = ctx.createChannelSplitter(2);
+      this.master.connect(this.meterSplit);
+      this.analysers = [ctx.createAnalyser(), ctx.createAnalyser()];
+      this.analysers.forEach((a, i) => {
+        a.fftSize = 2048;
+        this.meterSplit!.connect(a, i);
+      });
+      this.meterSamples = new Float32Array(2048);
+      destination = this.master;
+    }
     const room = impulse(ctx),
       plan: {
         source: AudioBufferSourceNode;
@@ -281,7 +317,14 @@ export class AudioEngine {
           ),
         ),
       );
-      const c = channel(ctx, t, audible(t, p.tracks), room, inputChannels);
+      const c = channel(
+        ctx,
+        t,
+        audible(t, p.tracks),
+        room,
+        inputChannels,
+        destination,
+      );
       if (live) this.channels.set(t.id, c);
       for (const clip of t.clips) {
         const b = this.buffers.get(clip.assetId);

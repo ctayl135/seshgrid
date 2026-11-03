@@ -11,6 +11,7 @@
 - [x] Local project save/reopen and offline stereo WAV export.
 - [x] Portable project backups, restore, and independent session copies.
 - [x] Undo/redo with grouped controls and separate local session recovery checkpoints.
+- [x] Microphone selector and live input/stereo mix peak meters.
 - [x] Tests for PCM capture, WAV encoding, source edits, local persistence and backup integrity.
 - [x] Real-browser synthetic capture, PCM encoding, decode, offline mixing and WAV export integration check.
 - [x] Supabase email account integration and private project/audio persistence code.
@@ -25,7 +26,7 @@
 
 ## Stabilization
 
-Add revision conflict detection, cloud autosave, input device selection, level meters, export peak management, storage garbage collection and project deletion. Broaden browser/device testing. Improve keyboard navigation, modal focus management and timeline editing ergonomics.
+Add revision conflict detection, cloud autosave, export peak management, storage garbage collection and project deletion. Broaden browser/device testing. Improve keyboard navigation, modal focus management and timeline editing ergonomics.
 
 ## Future phases (out of Phase 1 scope)
 

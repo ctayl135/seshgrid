@@ -1,9 +1,12 @@
+import { samplePeak } from "./meter";
 import { encodeWav } from "./wav";
 export class MicrophoneCapture {
   private node?: AudioWorkletNode;
   private source?: MediaStreamAudioSourceNode;
   private sink?: GainNode;
   private stream?: MediaStream;
+  private analyser?: AnalyserNode;
+  private meterSamples?: Float32Array<ArrayBuffer>;
   private chunks: Float32Array<ArrayBuffer>[] = [];
   private frames = 0;
   private finish?: (blob: Blob) => void;
@@ -11,7 +14,7 @@ export class MicrophoneCapture {
   private result?: Promise<Blob>;
   private stopRequested = false;
   constructor(private context: AudioContext) {}
-  async prepare(onInterrupted: () => void) {
+  async prepare(onInterrupted: () => void, deviceId = "") {
     if (!navigator.mediaDevices?.getUserMedia || !window.AudioWorkletNode)
       throw new Error(
         "Recording requires a modern browser on HTTPS or localhost.",
@@ -20,6 +23,7 @@ export class MicrophoneCapture {
       let timedOut = false;
       const request = navigator.mediaDevices.getUserMedia({
         audio: {
+          ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
           echoCancellation: false,
           noiseSuppression: false,
           autoGainControl: false,
@@ -53,6 +57,10 @@ export class MicrophoneCapture {
       await this.context.audioWorklet.addModule("/recorder.js");
       this.node = new AudioWorkletNode(this.context, "seshgrid-recorder");
       this.source = this.context.createMediaStreamSource(this.stream);
+      this.analyser = this.context.createAnalyser();
+      this.analyser.fftSize = 2048;
+      this.meterSamples = new Float32Array(this.analyser.fftSize);
+      this.source.connect(this.analyser);
       this.sink = this.context.createGain();
       this.sink.gain.value = 0;
       this.source
@@ -111,6 +119,13 @@ export class MicrophoneCapture {
       this.onInterrupted = onInterrupted;
     } catch (e) {
       this.dispose();
+      if (
+        e instanceof DOMException &&
+        (e.name === "NotFoundError" || e.name === "OverconstrainedError")
+      )
+        throw new Error(
+          "Selected microphone is unavailable. Choose System default or reconnect it and refresh inputs.",
+        );
       throw e;
     }
   }
@@ -150,6 +165,11 @@ export class MicrophoneCapture {
       this.dispose();
     }
   }
+  peak() {
+    if (!this.analyser || !this.meterSamples) return 0;
+    this.analyser.getFloatTimeDomainData(this.meterSamples);
+    return samplePeak(this.meterSamples);
+  }
   dispose() {
     this.context.removeEventListener("statechange", this.onStateChange);
     this.stream?.getTracks().forEach((t) => {
@@ -160,6 +180,9 @@ export class MicrophoneCapture {
     this.node?.disconnect();
     this.source?.disconnect();
     this.sink?.disconnect();
+    this.analyser?.disconnect();
+    this.analyser = undefined;
+    this.meterSamples = undefined;
     this.chunks = [];
   }
 }

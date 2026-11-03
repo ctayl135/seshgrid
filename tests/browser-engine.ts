@@ -31,18 +31,30 @@ button.onclick = async () => {
     // Substitute an oscillator stream in this test page only. No microphone is requested.
     Object.defineProperty(navigator, "mediaDevices", {
       configurable: true,
-      value: { getUserMedia: async () => destination.stream },
+      value: {
+        getUserMedia: async (constraints: MediaStreamConstraints) => {
+          check(
+            (constraints.audio as MediaTrackConstraints).deviceId !== undefined,
+            "Chosen microphone constraint was omitted",
+          );
+          return destination.stream;
+        },
+      },
     });
     capture = new MicrophoneCapture(context);
     await capture.prepare(() => {
       throw new Error("Synthetic capture interrupted");
-    });
+    }, "synthetic-input");
     const project = newProject(),
       track = newTrack("Synthetic take");
     project.tracks = [track];
     const when = await engine.play(project, 0);
     capture.start(when);
     await new Promise((resolve) => setTimeout(resolve, 1000));
+    check(
+      capture.peak() > 0.09 && capture.peak() < 0.11,
+      "Input meter does not measure raw microphone signal",
+    );
     const blob = await capture.stop(),
       id = crypto.randomUUID(),
       recorded = await engine.decode(id, blob);
@@ -69,6 +81,17 @@ button.onclick = async () => {
         duration: recorded.duration,
       },
     ];
+    await engine.play(project, 0);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    check(
+      engine.peak() > 0.04 && engine.peak() < 0.06,
+      "Mix meter does not measure post-fader signal",
+    );
+    engine.stop();
+    check(
+      engine.peak() === 0 && capture.peak() === 0,
+      "Stopped meters retain live audio nodes",
+    );
     const wav = await engine.export(project),
       header = new DataView(await wav.slice(0, 44).arrayBuffer());
     check(
@@ -132,13 +155,13 @@ button.onclick = async () => {
       echoes
         .getChannelData(channel)
         .slice(
-          Math.floor((time - 0.004) * 44100),
-          Math.ceil((time + 0.004) * 44100),
+          Math.floor((time - 0.004) * echoes.sampleRate),
+          Math.ceil((time + 0.004) * echoes.sampleRate),
         )
         .reduce((m, v) => Math.max(m, Math.abs(v)), 0);
     check(
       windowPeak(0, 0.05) > 0.04 && windowPeak(1, 0.05) < 0.001,
-      "First echo is not isolated left",
+      `First echo is not isolated left (L=${windowPeak(0, 0.05)}, R=${windowPeak(1, 0.05)}, rate=${echoes.sampleRate})`,
     );
     check(
       windowPeak(1, 0.1) > 0.015 && windowPeak(0, 0.1) < 0.001,
@@ -177,7 +200,36 @@ button.onclick = async () => {
         Math.abs(stereoPeak(1) - 0.05) < 0.001,
       "Legacy stereo audio was altered by bypassed effects",
     );
-    status.textContent = `PASS — actual AudioWorklet capture → PCM WAV → decode → offline mix/export. Take: ${recorded.duration.toFixed(3)}s; RMS: ${rms.toFixed(4)}. All eight vocal/adlib presets changed rendered audio with finite samples. Ping-pong echoes alternate left/right at the expected times. Legacy mono/stereo levels are preserved with effects bypassed. No microphone used.`;
+    const phase = context.createBuffer(
+      2,
+      context.sampleRate,
+      context.sampleRate,
+    );
+    for (let i = 0; i < phase.length; i++) {
+      const value =
+        0.4 * Math.sin((2 * Math.PI * 440 * i) / context.sampleRate);
+      phase.getChannelData(0)[i] = value;
+      phase.getChannelData(1)[i] = -value;
+    }
+    const phaseId = crypto.randomUUID();
+    engine.buffers.set(phaseId, phase);
+    bypass.clips = [
+      {
+        id: crypto.randomUUID(),
+        assetId: phaseId,
+        start: 0,
+        offset: 0,
+        duration: 1,
+      },
+    ];
+    await engine.play(project, 0);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    check(
+      engine.peak() > 0.19 && engine.peak() < 0.21,
+      "Stereo meter cancels opposite-phase channels",
+    );
+    engine.stop();
+    status.textContent = `PASS — actual AudioWorklet capture → PCM WAV → decode → offline mix/export. Take: ${recorded.duration.toFixed(3)}s; RMS: ${rms.toFixed(4)}. All eight vocal/adlib presets changed rendered audio with finite samples. Ping-pong echoes alternate left/right at the expected times. Legacy mono/stereo levels are preserved with effects bypassed. Input selection, input metering, stereo mix metering and stopped-node cleanup passed. No microphone used.`;
     status.dataset.passed = "true";
   } catch (error) {
     status.textContent = `FAIL — ${error instanceof Error ? error.message : String(error)}`;

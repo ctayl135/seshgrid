@@ -26,6 +26,8 @@ import { MicrophoneCapture } from "@/lib/capture";
 import { packSession, unpackSession } from "@/lib/portable";
 import Waveform from "./Waveform";
 import VocalRack from "./VocalRack";
+import LevelMeter from "./LevelMeter";
+import MicrophoneInput from "./MicrophoneInput";
 import { effectTail } from "@/lib/presets";
 import { useProjectEditor } from "./useProjectEditor";
 import { useSessionRecovery } from "./useSessionRecovery";
@@ -66,6 +68,11 @@ export default function Studio() {
     >([]),
     [email, setEmail] = useState(""),
     [password, setPassword] = useState("");
+  const [microphoneId, setMicrophoneId] = useState("");
+  const readInputPeak = useRef(
+    () => recorder.current?.capture.peak() ?? 0,
+  ).current;
+  const readMixPeak = useRef(() => engine.current?.peak() ?? 0).current;
   const [confirmation, setConfirmation] = useState<{
     message: string;
     resolve: (answer: boolean) => void;
@@ -299,7 +306,7 @@ export default function Studio() {
             );
             void stopRecording();
           }
-        });
+        }, microphoneId);
         let track = project!.tracks.find((t) => t.id === selected);
         if (!track) {
           track = newTrack(`Vocal ${project!.tracks.length + 1}`);
@@ -630,6 +637,18 @@ export default function Studio() {
             : "Your next great track starts here"}
         </div>
         <span className="free-badge">FREE TO CREATE</span>
+      </section>
+      <section className="recording-tools" aria-label="Recording setup">
+        <MicrophoneInput
+          value={microphoneId}
+          onChange={setMicrophoneId}
+          disabled={locked || playing}
+          revision={recording}
+        />
+        <div className="session-meters">
+          <LevelMeter label="Input" active={recording} read={readInputPeak} />
+          <LevelMeter label="Mix" active={playing} read={readMixPeak} />
+        </div>
       </section>
       <div className="workspace">
         <aside className="track-sidebar">
