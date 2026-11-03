@@ -10,6 +10,7 @@
 - [x] Local project save/reopen and offline stereo WAV export.
 - [x] Portable project backups, restore, and independent session copies.
 - [x] Tests for PCM capture, WAV encoding, source edits, local persistence and backup integrity.
+- [x] Real-browser synthetic capture, PCM encoding, decode, offline mixing and WAV export integration check.
 - [x] Supabase email account integration and private project/audio persistence code.
 - [x] Owner-scoped database/storage migration and deployment instructions.
 - [ ] Configure a live Supabase project and verify cross-user isolation.

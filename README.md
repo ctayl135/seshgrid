@@ -6,6 +6,8 @@ A free browser recording studio built with Next.js, React, TypeScript, Web Audio
 
 Use Node.js 24 and pnpm 11.25.0. Run `pnpm install`, then `pnpm dev`, and visit http://127.0.0.1:3000. Run `pnpm test`, `pnpm typecheck`, and `pnpm build` before shipping. Package versions and the package manager are pinned. GitHub Actions runs those checks on pushes and pull requests.
 
+For a real-browser audio integration test without microphone permission, run `node scripts/browser-engine-test.mjs`, open http://127.0.0.1:3002, and click Run audio pipeline test. This isolated local server uses the production capture/mix code with an oscillator stream and verifies capture duration, signal level, WAV format and rendered stereo output. It is not a production app route. Stop it with Ctrl+C after testing.
+
 ## Essential workflow
 
 1. Upload a beat (or multiple source files). Each file becomes a track with a waveform.
