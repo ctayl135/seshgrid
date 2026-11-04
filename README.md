@@ -190,6 +190,6 @@ Direct Auxd publishing is pending identification of the intended Auxd service an
 
 ## Underground preset library and demo accounts
 
-Open /presets for 16 searchable vocal/adlib chains: ten artist-inspired starting points (Lazer Dim 700, Glokk40Spaz, Bofpaxkmooky, OsamaSon and Summrs) plus six NOIR originals. These are original effect configurations, not official artist settings or endorsements. Start session creates and arms a new vocal/adlib track; existing tracks use Stock Plugins → Underground preset library. Settings preserve volume, pan, source edits and chosen pitch key/scale.
+Open /presets for 16 searchable vocal/adlib chains: ten artist-inspired starting points (Lazer Dim 700, Glokk40Spaz, Boofpaxkmooky, OsamaSon and Summrs) plus six NOIR originals. These are original effect configurations, not official artist settings or endorsements. Start session creates and arms a new vocal/adlib track; existing tracks use Stock Plugins → Underground preset library. Settings preserve volume, pan, source edits and chosen pitch key/scale.
 
 Two user-requested sample accounts, NOIR Demo Artist and NOIR Demo Producer, remain available for testing. Credentials are only in ignored local test-results/NOIR-demo-accounts.txt; never commit or deploy them. Their example.invalid email addresses cannot receive email. The existing ui-social-fixture cleanup commands remove these demo users when no longer needed. Separate automated privacy-test accounts are always removed after tests.

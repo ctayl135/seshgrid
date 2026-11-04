@@ -75,8 +75,8 @@ export const UNDERGROUND_PRESETS: UndergroundPreset[] = [
   },
   {
     id: "mooky-lead",
-    name: "Bofpaxkmooky · Floating silk",
-    artist: "Bofpaxkmooky",
+    name: "Boofpaxkmooky · Floating silk",
+    artist: "Boofpaxkmooky",
     category: "Vocals",
     description: "Smooth melodic correction with soft chorus and airy space.",
     chain: "Cloud Halo",
@@ -89,8 +89,8 @@ export const UNDERGROUND_PRESETS: UndergroundPreset[] = [
   },
   {
     id: "mooky-adlib",
-    name: "Bofpaxkmooky · Dream echoes",
-    artist: "Bofpaxkmooky",
+    name: "Boofpaxkmooky · Dream echoes",
+    artist: "Boofpaxkmooky",
     category: "Adlibs",
     description: "Hazy doubles and long stereo echoes for melodic backing.",
     chain: "Ghost Adlib",
