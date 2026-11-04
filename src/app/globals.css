@@ -2215,3 +2215,8 @@ select {
   }
 }
 .timeline-tools{display:flex;flex-wrap:wrap;gap:8px;padding:12px;border-bottom:1px solid #343735;background:#171b16}.timeline-tools label{display:grid;gap:3px;font-size:11px}.timeline-tools input{width:95px}.timeline-tools p{width:100%;font-size:12px;color:#acb49e}.timeline-tools button[aria-pressed=true]{border-color:#c4fa70;color:#c4fa70}.timeline-highlight{position:absolute;top:0;bottom:0;background:rgba(190,245,100,.14);border-left:1px solid #c4fa70;border-right:1px solid #c4fa70;pointer-events:none;z-index:2}.ruler{touch-action:none}.clip{touch-action:none}
+/* Timeline gestures select audio ranges, never ruler or clip-label text. */
+.timeline, .timeline * {
+  -webkit-user-select: none;
+  user-select: none;
+}
