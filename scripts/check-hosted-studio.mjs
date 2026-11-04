@@ -29,7 +29,7 @@ function request(path) {
   return result.slice(0, marker);
 }
 const html = request("/");
-if (!html.includes("NEW AGE NOIR — by New Age Music"))
+if (!html.includes("NOIR — by New Age Music"))
   throw new Error("Unexpected hosted page");
 const assets = [
   ...new Set(

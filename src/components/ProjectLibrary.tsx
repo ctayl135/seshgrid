@@ -20,7 +20,10 @@ export default function ProjectLibrary({
   local: SavedSession[];
   cloud: { id: string; name: string; updated_at: string }[];
   userId?: string;
-  open: (load: () => Promise<SavedSession>) => void;
+  open: (
+    load: () => Promise<SavedSession>,
+    location: "local" | "cloud",
+  ) => void;
 }) {
   const entries = new Map<string, Entry>();
   for (const s of local)
@@ -186,7 +189,10 @@ export default function ProjectLibrary({
                 aria-label={"Open " + song.name + " in studio"}
                 onClick={() => {
                   player.stop();
-                  open(song.load);
+                  open(
+                    song.load,
+                    song.source === "Private cloud" ? "cloud" : "local",
+                  );
                 }}
               >
                 Open

@@ -51,8 +51,16 @@ function download(blob: Blob, name: string) {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
-export default function Studio() {
+export default function Studio({
+  initialSession,
+  initialDialog,
+}: {
+  initialSession?: { id: string; source: string };
+  initialDialog?: "auth" | "projects";
+} = {}) {
   const router = useRouter();
+  const [authReady, setAuthReady] = useState(false);
+  const openedInitial = useRef(false);
   const editor = useProjectEditor(),
     project = editor.project,
     setProject = editor.reset;
@@ -120,7 +128,13 @@ export default function Studio() {
     engine.current = new AudioEngine();
     setProject(newProject());
     const s = supabase;
-    s?.auth.getUser().then(({ data }) => setUser(data.user));
+    if (s)
+      void s.auth
+        .getUser()
+        .then(({ data }) => setUser(data.user))
+        .catch(() => setUser(null))
+        .finally(() => setAuthReady(true));
+    else setAuthReady(true);
     const sub = s?.auth.onAuthStateChange((_event, session) =>
       setUser(session?.user ?? null),
     );
@@ -422,6 +436,10 @@ export default function Studio() {
       }
       editor.saved(session.project);
       setDirty(false);
+      router.replace(
+        `/studio?project=${encodeURIComponent(session.project.id)}&source=${localOK ? "local" : "cloud"}`,
+        { scroll: false },
+      );
       await recovery.clear().catch(() => {});
       setMessage(
         cloudOK
@@ -450,7 +468,11 @@ export default function Studio() {
         );
     });
   };
-  const reopen = (get: () => Promise<SavedSession>, recoveryId?: string) =>
+  const reopen = (
+    get: () => Promise<SavedSession>,
+    recoveryId?: string,
+    location: "local" | "cloud" | "file" = "file",
+  ) =>
     run(async () => {
       if (
         dirty &&
@@ -481,7 +503,14 @@ export default function Studio() {
       select(p.tracks[0]?.id ?? "");
       selectClip("");
       setPosition(0);
-      setDirty(!!recoveryId);
+      setDirty(!!recoveryId || location === "file");
+      const address = recoveryId
+        ? `/studio?project=${encodeURIComponent(recoveryId)}&source=recovery`
+        : location === "file"
+          ? "/studio"
+          : `/studio?project=${encodeURIComponent(p.id)}&source=${location}`;
+      if (window.location.pathname + window.location.search !== address)
+        router.replace(address, { scroll: false });
       if (recoveryId) recovery.adopt(recoveryId);
       setModal(null);
       setMessage(
@@ -490,7 +519,36 @@ export default function Studio() {
           : "Project reopened with source audio and mix settings.",
       );
     });
-  if (!project) return <main className="loading">Opening NEW AGE NOIR…</main>;
+  useEffect(() => {
+    if (!project || !authReady || openedInitial.current) return;
+    openedInitial.current = true;
+    if (initialSession) {
+      const { id, source } = initialSession;
+      void reopen(
+        async () => {
+          if (source === "recovery") return loadRecovery(id);
+          if (source === "cloud") {
+            if (!user)
+              throw new Error(
+                "Sign in to open this cloud session, then return to Sessions.",
+              );
+            return loadCloud(id, user.id);
+          }
+          if (source !== "local") throw new Error("Unknown session location");
+          const session = (await listLocal()).find((s) => s.project.id === id);
+          if (!session)
+            throw new Error(
+              "This session is not saved at this browser address. Open a backup or return to Sessions.",
+            );
+          return session;
+        },
+        source === "recovery" ? id : undefined,
+        source === "cloud" ? "cloud" : source === "local" ? "local" : "file",
+      );
+    } else if (initialDialog === "projects") openProjects();
+    else if (initialDialog === "auth") setModal("auth");
+  }, [project, authReady, initialSession, initialDialog, user]);
+  if (!project) return <main className="loading">Opening NOIR…</main>;
   const track = project.tracks.find((t) => t.id === selected),
     clip = project.tracks.flatMap((t) => t.clips).find((c) => c.id === clipId),
     width = Math.max(900, (projectEnd(project) + 15) * PX),
@@ -533,8 +591,15 @@ export default function Studio() {
         }}
       />
       <header>
-        <a className="brand" href="/" onClick={(e) => e.preventDefault()}>
-          <span className="logo">▥</span> NEW AGE <span>NOIR</span>
+        <a
+          className="brand"
+          href="/"
+          onClick={(e) => {
+            e.preventDefault();
+            void navigate("/");
+          }}
+        >
+          <span className="logo">▥</span> <span>NOIR</span>
           <small>BY NEW AGE MUSIC</small>
         </a>
         <div className="project-title">
@@ -560,6 +625,26 @@ export default function Studio() {
           </span>
         </div>
         <div className="header-actions">
+          <Link
+            className="nav-link"
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              void navigate("/");
+            }}
+          >
+            Home
+          </Link>
+          <Link
+            className="nav-link"
+            href="/sessions"
+            onClick={(e) => {
+              e.preventDefault();
+              void navigate("/sessions");
+            }}
+          >
+            Sessions
+          </Link>
           <Link
             className="nav-link"
             href="/fyp"
@@ -606,7 +691,7 @@ export default function Studio() {
               run(async () => {
                 download(
                   await engine.current!.export(project),
-                  `${project.name || "New Age Noir"}.wav`,
+                  `${project.name || "NOIR"}.wav`,
                 );
                 setMessage(
                   "WAV exported at 44.1 kHz, 16-bit stereo. Peaks above 0 dBFS are clipped; lower track levels if distorted.",
@@ -1265,7 +1350,7 @@ export default function Studio() {
       </div>
       <footer>
         <span role="status">{busy ? "Working…" : message}</span>
-        <span>NEW AGE NOIR · BY NEW AGE MUSIC</span>
+        <span>NOIR · BY NEW AGE MUSIC</span>
       </footer>
       {error && (
         <div role="alert" className="error">
@@ -1299,7 +1384,7 @@ export default function Studio() {
             {modal === "auth" ? (
               <>
                 <span className="eyebrow">YOUR SPACE TO CREATE</span>
-                <h2>{user ? "Your account" : "Welcome to NEW AGE NOIR"}</h2>
+                <h2>{user ? "Your account" : "Welcome to NOIR"}</h2>
                 {!supabase ? (
                   <p>
                     Cloud accounts need Supabase configuration. Local recording,
@@ -1431,6 +1516,7 @@ export default function Studio() {
                       name: `${p.name.slice(0, 195)} copy`,
                     }));
                     setModal(null);
+                    router.replace("/studio", { scroll: false });
                     setMessage(
                       "Session duplicated. Save to create a separate project.",
                     );
@@ -1454,6 +1540,7 @@ export default function Studio() {
                     assets.current.clear();
                     engine.current!.buffers.clear();
                     setProject(newProject());
+                    router.replace("/studio", { scroll: false });
                     select("");
                     selectClip("");
                     setPosition(0);
@@ -1487,7 +1574,7 @@ export default function Studio() {
                   local={local}
                   cloud={cloud}
                   userId={user?.id}
-                  open={(load) => reopen(load)}
+                  open={(load, location) => reopen(load, undefined, location)}
                 />
                 {!user && (
                   <p className="library-hint">

@@ -1,4 +1,4 @@
-# NEW AGE NOIR roadmap
+# NOIR roadmap
 
 ## Milestone 1 — recording workflow
 
@@ -32,6 +32,8 @@
 - [x] Non-destructive clip normalization, duplication and beat-grid start snapping.
 - [x] Artist profiles and member-only For You discovery with opted-in mix publication.
 - [x] Live tests for owner-only profile/release changes and published/unpublished media access.
+
+- [x] NOIR home screen and Sessions tab for new, saved and recovered work.
 
 ## Stabilization
 

@@ -1,8 +1,14 @@
-# NEW AGE NOIR — by New Age Music
+# NOIR — by New Age Music
 
 A free browser recording studio built with Next.js, React, TypeScript, Web Audio and Supabase. Phase 1 has no billing, subscriptions, or paid feature gates.
 
 Branded private studio: https://new-age-noir-ctayl135-6200-stripe.vercel.app. Existing browser projects remain available at https://seshgrid-lab-ctayl135-6200-stripe.vercel.app, which also runs the renamed app. Reuse this address for browser saves and recovery across preview updates. Projects stored at earlier deployment addresses remain there; transfer them using Backup → Open project file.
+
+## Home and Sessions
+
+The home screen is now the default page at /. Sessions is a dedicated tab at /sessions, with New session, searchable saved sessions and recovery drafts. Browser and signed-in cloud copies are combined, keeping the newest saved copy of each project. Studio editing now lives at /studio. Open project backup enters the existing project-file importer and playlist view.
+
+Opening a saved card passes its private project identity and storage location to the studio, where source audio and mix settings are validated before replacing the editor. Saving updates the studio address to the saved session; refreshing reopens it. New sessions and independent copies clear the old session address. No source audio or credentials are placed in URLs. Existing browser database keys, .sesh backups and hosting addresses remain compatible.
 
 ## Run locally
 
@@ -43,7 +49,7 @@ Settings are stored in an optional `fx` field in the existing version-1 track ma
 
 ## Artist profiles and For You
 
-The app is now branded **NEW AGE NOIR**, by **New Age Music**. The existing repository, internal browser database and .sesh backup format retain their identifiers so previous sessions keep working.
+The app is now branded **NOIR**, by **New Age Music**. The existing repository, internal browser database and .sesh backup format retain their identifiers so previous sessions keep working.
 
 Profile lets a signed-in artist save a display name, bio and preferred genre. For You lists opted-in releases from members, putting the listener's genre first, with a genre filter and artist profile links. It is a simple discovery feed over the latest 100 releases, not a trained recommendation system. Artist pages display their releases; owners can unpublish and republish.
 

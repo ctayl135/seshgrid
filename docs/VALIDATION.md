@@ -97,3 +97,10 @@ Projects playlist build is Ready at https://seshgrid-8npx5vubb-ctayl135-6200-str
 - The feed is a member-only discovery list prioritizing profile genre among the latest 100 releases. Four-minute/50 MB publishing safety limits, signed-link expiry and broader device testing remain documented.
 
 Deployment dpl_HRf4T1eViHCMHu8wX26EFHvEdUxU is Ready. Both the existing private lab address and https://new-age-noir-ctayl135-6200-stripe.vercel.app point to the renamed app, protected by Vercel Authentication. Hosted studio import, independent beat/vocal sections, normalization, 0.27s → 0.5s beat snapping, local save and For You authentication gating passed. Production alias was not promoted. New hostnames have independent browser storage; use portable backups to transfer local projects.
+
+## NOIR home and Sessions — November 4, 2026
+
+- Shortened the app name to NOIR across studio, profile, feed and page metadata. Home is now /, Sessions is /sessions and recording/editing is /studio.
+- All 28 tests, TypeScript, production build and browser credential scan pass.
+- Browser checks passed for Home → Sessions, opening an existing saved source/preset project, New session creating a blank studio, saving a new named session with its own reopen URL, refresh/navigation, and the Open project backup shortcut entering the project importer. Existing project storage identifiers and source files remain unchanged.
+- Session cards combine local and signed-in cloud projects and retain recovery entries. Cloud authorization remains enforced by the existing owner policies. Studio route changes do not publish or share projects.

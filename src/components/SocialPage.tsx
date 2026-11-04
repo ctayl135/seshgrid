@@ -127,10 +127,11 @@ export default function SocialPage({
     <main className="social-page">
       <nav className="social-nav">
         <Link href="/" className="brand">
-          NEW AGE <span>NOIR</span>
+          NOIR
         </Link>
         <div>
-          <Link href="/">Studio</Link>
+          <Link href="/">Home</Link>
+          <Link href="/sessions">Sessions</Link>
           <Link href="/fyp">For You</Link>
           <Link href="/profile">Profile</Link>
         </div>
@@ -157,7 +158,7 @@ export default function SocialPage({
             Sign in from the studio to create your profile and listen to member
             releases. Private testing is still active.
           </p>
-          <Link href="/">Open studio to sign in</Link>
+          <Link href="/studio?account=1">Sign in</Link>
         </section>
       ) : (
         <>
@@ -304,7 +305,7 @@ export default function SocialPage({
                   Publish a mix from the studio to add real music here. Projects
                   and source recordings stay private.
                 </p>
-                <Link href="/">Make a song</Link>
+                <Link href="/studio">Make a song</Link>
               </div>
             )}
           </section>
@@ -316,7 +317,7 @@ export default function SocialPage({
         </p>
       )}
       {message && <p role="status">{message}</p>}
-      <footer>NEW AGE NOIR · BY NEW AGE MUSIC</footer>
+      <footer>NOIR · BY NEW AGE MUSIC</footer>
     </main>
   );
 }
