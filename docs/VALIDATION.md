@@ -116,3 +116,5 @@ Private deployment dpl_4fwg1bQJWd5esvnRsSQF8PZdV3Mg is Ready and assigned to bot
 - Current limits: signed-in private testing, four-minute/50 MB beat uploads, 15-second visible-page inbox polling, recent-message history bounds and asynchronous shared saves. No live simultaneous edit merging, browser push or email notifications.
 
 The browser recipient accepted the invitation, reopened the shared source audio and successfully saved a title edit to the owner’s cloud project. Temporary UI accounts, beat posts, shared source files, messages and invitations were removed after verification.
+
+Community deployment dpl_7SKr3CWqNxPTrBC3o2BireHm8Kzq is Ready and assigned to both existing private studio addresses. Hosted Home → Beats → DMs → Notifications navigation and account gating passed. Vercel Authentication remains enabled, and public signup remains deferred. No new API keys or paid resources were required.
