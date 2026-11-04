@@ -133,3 +133,7 @@ Private deployment dpl_HFZDfEAJA1rveXGFKhRLhDwTssq3 is Ready and assigned to bot
 - Added six distinct Pitch Lock effect chains, preserving selected key/scale and channel volume/pan. Added independently adjustable chorus doubler, 5 Hz tremolo and digital crusher. Optional model fields keep older sessions compatible; processing cache includes all new controls.
 - All 38 tests pass, including distinct chain validation and color processing/bypass/source preservation. Production build, TypeScript, credential scan and upload exclusion check pass.
 - Private deployment dpl_4AARcKwSscexPPkNmk6cK2ZJgsLn is Ready at both stable private aliases. Hosted generated-audio Neon Robot WAV export and local save/reopen restore chorus 15%, tremolo 40%, crusher 80% and tuning settings. No user microphone or voice was used. Processing remains playback/export only.
+
+## Public production launch — November 4, 2026
+
+Deployment dpl_2EdMywgWvH8UmLtvjQrP7MEuTTHB is Ready in production. Standard Vercel protection allows public production domains and retains preview protection. Both public home/studio and beats/sessions routes return HTTP 200 without cookies, authorization headers or protection bypass tokens. Confirmed NOIR title rather than a Vercel authentication page. The NOIR alias is now a project domain following production. Re-ran the live three-account privacy, source round-trip, DM, beat, invitation and revision matrix successfully; temporary fixtures removed. Public signup remains deferred, private sources remain protected and GitHub stays private.

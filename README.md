@@ -173,3 +173,9 @@ Pitch Lock is browser-native monophonic correction for approximately 70–1000 H
 ### Expanded tuning studio
 
 Six tuning chains combine Pitch Lock with channel effects: Rage Wire (grit/slap), Cloud Halo (chorus/echo), Neon Robot (crunch/pulse), Velvet Lead (gentle/clean), Ghost Adlib (doubling/wide echo), and Basement Phone (filtered grit). Choose a chain, then set the key/scale to your song. Chains preserve key/scale, volume, pan and source edits but replace channel EQ, reverb and effects. These are six configurations of the native Pitch Lock engine, not separate third-party Auto-Tune products. Optional Chorus doubler, 5 Hz Tremolo pulse and Digital crusher controls also work independently of pitch correction. Saved settings and exports include all three; bypass/reset returns stock processing to dry. Existing processing duration safeguards apply.
+
+## Public studio — November 4, 2026
+
+At the owner's request, the current NOIR build is now deployed to production. Public address: https://new-age-noir-ctayl135-6200-stripe.vercel.app (also https://seshgrid.vercel.app). The NOIR address is registered as a project domain so it follows future production deployments. Standard Vercel protection keeps previews protected while production domains are public. The configuration script preserves this scope on subsequent runs; --public-production explicitly selects it.
+
+Public access enables the local browser studio without a Vercel account. Cloud projects, recordings, DMs and shared session permissions remain account-protected. Public email signup remains deferred until email delivery is configured; visitors can record, save locally and export without signing in. The GitHub repository remains private.

@@ -1,8 +1,15 @@
 import { projectId, vercelAPI } from "./vercel-api.mjs";
+const publicProduction = process.argv.includes("--public-production");
 try {
   const initial = await vercelAPI(`/v9/projects/${projectId}`);
   if (initial.id !== projectId || !initial.name.startsWith("seshgrid"))
     throw new Error("Unexpected Vercel project");
+  const protection =
+    publicProduction ||
+    initial.ssoProtection?.deploymentType ===
+      "prod_deployment_urls_and_all_previews"
+      ? "prod_deployment_urls_and_all_previews"
+      : "all";
   const updated = await vercelAPI(`/v9/projects/${projectId}`, {
     method: "PATCH",
     body: JSON.stringify({
@@ -11,10 +18,10 @@ try {
       buildCommand: "pnpm build",
       installCommand: "pnpm install --frozen-lockfile",
       publicSource: false,
-      ssoProtection: { deploymentType: "all" },
+      ssoProtection: { deploymentType: protection },
     }),
   });
-  if (updated.ssoProtection?.deploymentType !== "all")
+  if (updated.ssoProtection?.deploymentType !== protection)
     throw new Error(
       "Private deployment protection was not confirmed. No deployment should proceed.",
     );
