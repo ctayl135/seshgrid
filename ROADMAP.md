@@ -55,3 +55,5 @@ Virtual instruments and MIDI; revisioned collaboration; separate licensed beat m
 - [x] Monophonic Pitch Lock, gate, de-esser and presence EQ, with playback/export parity.
 - [x] Portable, local and cloud persistence for plugin settings and take identities.
 - [ ] Live microphone pitch monitoring, automatic repeated loop recording and graphical pitch editing remain future work.
+
+- [x] Six tuning/effect chains plus standalone chorus doubler, tremolo and digital crusher.

@@ -1,5 +1,6 @@
 "use client";
 import type { Track } from "@/lib/model";
+import { TUNE_STYLES, applyTuneStyle } from "@/lib/tune-presets";
 import {
   stockPlugins,
   DEFAULT_PLUGINS,
@@ -31,6 +32,23 @@ export default function StockRack({
           Bypass rack
         </button>
       </div>
+      <details open>
+        <summary>Tuning studio · six vocal chains</summary>
+        <p>
+          Choose a character, then set your song’s key and scale below. These
+          chains replace this channel’s effects and preserve its volume and pan.
+        </p>
+        {TUNE_STYLES.map((s) => (
+          <button
+            key={s.name}
+            disabled={disabled}
+            title={s.description}
+            onClick={() => update(applyTuneStyle(track, s.name))}
+          >
+            {s.name}
+          </button>
+        ))}
+      </details>
       <div className="plugin-presets">
         <button
           disabled={disabled}
@@ -235,6 +253,33 @@ export default function StockRack({
         racks above. Stop playback before changing stock processing. Live
         microphone monitoring stays off.
       </p>
+      <details open>
+        <summary>05 · Color effects</summary>
+        {(["chorus", "tremolo", "crush"] as const).map((name) => (
+          <label key={name}>
+            {name === "chorus"
+              ? "Chorus doubler"
+              : name === "tremolo"
+                ? "Tremolo pulse"
+                : "Digital crusher"}{" "}
+            <output>{Math.round((p[name] ?? 0) * 100)}%</output>
+            <input
+              aria-label={name}
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={p[name] ?? 0}
+              disabled={off}
+              onChange={(e) => patch({ [name]: Number(e.target.value) })}
+            />
+          </label>
+        ))}
+        <p>
+          Chorus adds a modulated double; tremolo pulses at 5 Hz; crusher adds
+          digital grit. All are included in export.
+        </p>
+      </details>
       <button
         disabled={disabled}
         onClick={() => update({ plugins: stockPlugins(DEFAULT_PLUGINS) })}

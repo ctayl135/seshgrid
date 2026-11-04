@@ -130,6 +130,9 @@ export function validateProject(value: unknown): Project {
         !finite(v.deEss, 0, 1) ||
         !finite(v.midGain, -12, 12) ||
         !finite(v.midFreq, 200, 8000) ||
+        [v.chorus, v.tremolo, v.crush].some(
+          (n) => n !== undefined && !finite(n, 0, 1),
+        ) ||
         !v.pitch ||
         typeof v.pitch.enabled !== "boolean" ||
         !Number.isInteger(v.pitch.root) ||

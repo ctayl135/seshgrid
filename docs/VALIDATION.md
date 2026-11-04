@@ -127,3 +127,9 @@ Community deployment dpl_7SKr3CWqNxPTrBC3o2BireHm8Kzq is Ready and assigned to b
 - Pitch correction currently processes playback/export, not live input. Physical microphone latency, subjective vocal quality, mobile/background behavior and interruption recovery still need broader device testing. Loops audition a fixed rendered region; recording remains linear.
 
 Private deployment dpl_HFZDfEAJA1rveXGFKhRLhDwTssq3 is Ready and assigned to both existing private studio addresses. Hosted synthetic session import, Hard tune/key/scale controls and actual WAV download passed. Vercel Authentication remains enabled. No new keys, migrations or paid resources were required.
+
+## Expanded tuning chains — November 4, 2026
+
+- Added six distinct Pitch Lock effect chains, preserving selected key/scale and channel volume/pan. Added independently adjustable chorus doubler, 5 Hz tremolo and digital crusher. Optional model fields keep older sessions compatible; processing cache includes all new controls.
+- All 38 tests pass, including distinct chain validation and color processing/bypass/source preservation. Production build, TypeScript, credential scan and upload exclusion check pass.
+- Private deployment dpl_4AARcKwSscexPPkNmk6cK2ZJgsLn is Ready at both stable private aliases. Hosted generated-audio Neon Robot WAV export and local save/reopen restore chorus 15%, tremolo 40%, crusher 80% and tuning settings. No user microphone or voice was used. Processing remains playback/export only.

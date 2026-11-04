@@ -140,3 +140,42 @@ test("stock settings and take identities round-trip and invalid plugin parameter
   t.plugins.deEss = NaN;
   assert.throws(() => validateProject(p));
 });
+import { TUNE_STYLES, applyTuneStyle } from "../src/lib/tune-presets";
+test("all tuning chains validate, preserve key and mix position and produce distinct settings", () => {
+  const t = newTrack("Voice");
+  t.plugins = stockPlugins();
+  t.plugins.pitch.root = 9;
+  t.plugins.pitch.scale = "minor";
+  const settings = TUNE_STYLES.map((s) => {
+    const result = { ...t, ...applyTuneStyle(t, s.name) };
+    const p = newProject();
+    p.tracks = [result];
+    validateProject(p);
+    assert.equal(result.plugins!.pitch.root, 9);
+    assert.equal(result.plugins!.pitch.scale, "minor");
+    assert.equal(result.gain, t.gain);
+    assert.equal(result.pan, t.pan);
+    return JSON.stringify(result.plugins);
+  });
+  assert.equal(new Set(settings).size, 6);
+});
+test("color plugins change audio, preserve duration and remain bypassable", async () => {
+  const input = tone(440);
+  const original = input.slice();
+  for (const key of ["chorus", "tremolo", "crush"] as const) {
+    const p = stockPlugins();
+    p[key] = 1;
+    const output = (await processStock([input], rate, p))[0];
+    assert.equal(output.length, input.length);
+    assert.ok(output.every(Number.isFinite));
+    assert.notDeepEqual(output, input);
+    p.bypass = true;
+    assert.deepEqual((await processStock([input], rate, p))[0], input);
+    const t = newTrack("invalid");
+    t.plugins = { ...p, [key]: 2 };
+    const project = newProject();
+    project.tracks = [t];
+    assert.throws(() => validateProject(project));
+  }
+  assert.deepEqual(input, original);
+});

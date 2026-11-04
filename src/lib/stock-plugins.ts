@@ -4,6 +4,9 @@ export type StockPlugins = {
   deEss: number;
   midGain: number;
   midFreq: number;
+  chorus?: number;
+  tremolo?: number;
+  crush?: number;
   pitch: {
     enabled: boolean;
     root: number;
@@ -18,6 +21,9 @@ export const DEFAULT_PLUGINS: StockPlugins = {
   deEss: 0,
   midGain: 0,
   midFreq: 1400,
+  chorus: 0,
+  tremolo: 0,
+  crush: 0,
   pitch: {
     enabled: false,
     root: 0,
@@ -104,6 +110,37 @@ export function detectPitch(samples: Float32Array, rate: number, start = 0) {
   return 0;
 }
 const yieldUI = () => new Promise<void>((r) => setTimeout(r, 0));
+async function colorAudio(
+  out: Float32Array<ArrayBuffer>[],
+  rate: number,
+  p: StockPlugins,
+) {
+  const chorus = p.chorus ?? 0,
+    tremolo = p.tremolo ?? 0,
+    crush = p.crush ?? 0;
+  if (!chorus && !tremolo && !crush) return out;
+  for (let c = 0; c < out.length; c++) {
+    const dry = out[c].slice();
+    const steps = Math.pow(2, 16 - crush * 12);
+    for (let i = 0; i < dry.length; i++) {
+      const delay =
+        rate *
+        (0.018 +
+          0.005 * Math.sin((2 * Math.PI * 0.8 * i) / rate + (c * Math.PI) / 2));
+      const pos = i - delay,
+        j = Math.floor(pos),
+        frac = pos - j;
+      const wet = j >= 0 ? dry[j] * (1 - frac) + (dry[j + 1] ?? 0) * frac : 0;
+      let v = dry[i] * (1 - chorus * 0.5) + wet * chorus * 0.5;
+      v *= 1 - tremolo * (0.5 - 0.5 * Math.cos((2 * Math.PI * 5 * i) / rate));
+      out[c][i] = crush
+        ? v * (1 - crush) + (Math.round(v * steps) / steps) * crush
+        : v;
+      if (i > 0 && i % 131072 === 0) await yieldUI();
+    }
+  }
+  return out;
+}
 export async function processStock(
   input: readonly Float32Array[],
   rate: number,
@@ -152,7 +189,7 @@ export async function processStock(
     }
   }
   if (!p.pitch.enabled || p.pitch.strength === 0 || length < rate * 0.08)
-    return out;
+    return colorAudio(out, rate, p);
   let reference = out[0],
     bestEnergy = -1;
   for (const c of out) {
@@ -238,5 +275,5 @@ export async function processStock(
     if (weights[i] > 0.0001 && periods[frame])
       for (let c = 0; c < out.length; c++) out[c][i] = sums[c][i] / weights[i];
   }
-  return out;
+  return colorAudio(out, rate, p);
 }

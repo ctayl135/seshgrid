@@ -307,7 +307,10 @@ export class AudioEngine {
         fx.bypass ||
         ((!fx.pitch.enabled || fx.pitch.strength === 0) &&
           fx.gateDb === 0 &&
-          fx.deEss === 0)
+          fx.deEss === 0 &&
+          !fx.chorus &&
+          !fx.tremolo &&
+          !fx.crush)
       )
         continue;
       for (const clip of t.clips) {
@@ -324,6 +327,9 @@ export class AudioEngine {
           fx.gateDb,
           fx.deEss,
           fx.pitch,
+          fx.chorus,
+          fx.tremolo,
+          fx.crush,
         ]);
         let buffer = this.pluginCache.get(key);
         if (!buffer) {
