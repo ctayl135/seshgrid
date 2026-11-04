@@ -183,3 +183,7 @@ The range pointer-up gesture opens a viewport-bounded Selection actions popup wi
 ## Direct highlighted-clip dragging — November 4, 2026
 
 Highlight / Select now supports direct clip dragging with a visual group preview and edge scrolling, using existing snapped/clamped move logic. One drop creates one undo entry; cancelled gestures discard the preview. Browser test passed with three selected generated clips: dragging 64 pixels moved start times from 0/0.5/0.5 seconds to 2/2.5/2.5 seconds while Highlight remained active; one Undo restored the original arrangement. Build/TypeScript and client credential scan pass. Production dpl_9aZic16Yh9zcRcmsfBFuefwQWoj8 is Ready.
+
+## Volume Motion — November 4, 2026
+
+All 46 tests, TypeScript, production build and credential scan pass. Tests cover interpolation, seeking into a curve, unity outside the region, scheduling a future region without an early ramp, validation and portable persistence. Actual browser audio-engine integration confirms the exported late fade window has over three times the RMS of the early window. Existing capture, effects, metering, playlist and loop regression checks pass. UI checks confirm a two-second fade/visible motion strip, four-point ducking curve and local save/reopen retaining point times and values. Cloud round-trip fixture includes Volume Motion metadata and byte-exact source restoration. Production dpl_GkNVPGKmy1RGubbnCqSt7wg1SSu5 is Ready.

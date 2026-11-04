@@ -337,6 +337,32 @@ button.onclick = async () => {
       Math.abs(hz - 440) < 4,
       "Pitch Lock was not applied to WAV export: " + hz,
     );
+    tuned.plugins.pitch.enabled = false;
+    tuned.volumeMotion = {
+      id: crypto.randomUUID(),
+      start: 0,
+      duration: 1,
+      points: [
+        { time: 0, value: 0 },
+        { time: 1, value: 1 },
+      ],
+    };
+    const moving = await context.decodeAudioData(
+      await (await engine.export(project)).arrayBuffer(),
+    );
+    const windowRms = (at: number) => {
+      const a = moving
+        .getChannelData(1)
+        .slice(
+          Math.floor(at * moving.sampleRate),
+          Math.floor((at + 0.1) * moving.sampleRate),
+        );
+      return Math.sqrt(a.reduce((n, v) => n + v * v, 0) / a.length);
+    };
+    check(
+      windowRms(0.8) > windowRms(0.1) * 3,
+      "Volume Motion did not fade the exported audio",
+    );
     await engine.loop(project, 0, 0.25, true);
     await new Promise((r) => setTimeout(r, 450));
     check(

@@ -2221,3 +2221,4 @@ select {
   user-select: none;
 }
 .selection-menu{position:fixed;z-index:1000;width:220px;max-height:calc(100vh - 16px);overflow:auto;padding:10px;background:#20251c;border:1px solid #b4e66a;border-radius:10px;box-shadow:0 10px 36px #0009;display:grid;gap:5px}.selection-menu>div:first-child{display:flex;align-items:center;justify-content:space-between}.selection-menu>button{text-align:left;padding:7px 10px}.selection-menu small{color:#b0bea3;padding-top:6px}.selection-tool-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:4px}
+.motion-clip{position:absolute;bottom:0;height:16px;padding:0 3px!important;border:1px solid #ce9cf8!important;border-radius:3px!important;background:#513263!important;color:#f6eaff!important;font-size:10px!important;overflow:hidden;white-space:nowrap;z-index:4}.motion-point{display:grid;gap:4px;padding:6px 0;border-bottom:1px solid #3b4234}

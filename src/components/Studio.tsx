@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { AudioEngine } from "@/lib/audio";
+import VolumeMotion from "./VolumeMotion";
 import {
   snapTime,
   clipsInRange,
@@ -734,7 +735,17 @@ export default function Studio({
   if (!project) return <main className="loading">Opening NOIR…</main>;
   const track = project.tracks.find((t) => t.id === selected),
     clip = project.tracks.flatMap((t) => t.clips).find((c) => c.id === clipId),
-    width = Math.max(900, (projectEnd(project) + 15) * PX),
+    width = Math.max(
+      900,
+      (Math.max(
+        projectEnd(project),
+        ...project.tracks.map((t) =>
+          t.volumeMotion ? t.volumeMotion.start + t.volumeMotion.duration : 0,
+        ),
+      ) +
+        15) *
+        PX,
+    ),
     locked = busy || recording || playing || readOnly;
   const numberField = (
     label: string,
@@ -1573,6 +1584,27 @@ export default function Studio({
               >
                 Delete selected
               </button>
+              <button
+                disabled={!selected || Math.abs(range[1] - range[0]) < 0.25}
+                onClick={() => {
+                  const start = Math.min(...range),
+                    duration = Math.abs(range[1] - range[0]);
+                  patchTrack(selected, {
+                    volumeMotion: {
+                      id: crypto.randomUUID(),
+                      start,
+                      duration,
+                      points: [
+                        { time: 0, value: 0 },
+                        { time: duration, value: 1 },
+                      ],
+                    },
+                  });
+                  setSelectionMenu(null);
+                }}
+              >
+                Create Volume Motion
+              </button>
               <small>Choose a tool</small>
               <div className="selection-tool-grid">
                 {(
@@ -1907,6 +1939,23 @@ export default function Studio({
                       />
                     </button>
                   ))}
+                  {t.volumeMotion && (
+                    <button
+                      className="motion-clip"
+                      style={{
+                        left: t.volumeMotion.start * PX,
+                        width: Math.max(12, t.volumeMotion.duration * PX),
+                      }}
+                      disabled={locked}
+                      aria-label={"Edit Volume Motion on " + t.name}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        select(t.id);
+                      }}
+                    >
+                      ↗ Volume Motion
+                    </button>
+                  )}
                 </div>
               ))}
               {!project.tracks.length && (
@@ -2199,6 +2248,13 @@ export default function Studio({
                   update={(patch) => patchTrack(track.id, patch)}
                 />
               )}
+              <VolumeMotion
+                track={track}
+                disabled={locked}
+                start={range[0] !== range[1] ? Math.min(...range) : position}
+                end={range[0] !== range[1] ? Math.max(...range) : position + 4}
+                update={(patch) => patchTrack(track.id, patch)}
+              />
               <StockRack
                 track={track}
                 disabled={locked}

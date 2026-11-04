@@ -3,6 +3,7 @@ import { TransportClicks } from "./transport-clicks";
 import { samplePeak } from "./meter";
 import { audible, projectEnd, type Project, type Track } from "./model";
 import { encodeWav } from "./wav";
+import { scheduleMotion } from "./volume-motion";
 import { decodeAudio } from "./codecs";
 import { trackEffects, effectTail } from "./presets";
 type Context = AudioContext | OfflineAudioContext;
@@ -483,7 +484,11 @@ export class AudioEngine {
         offset: number;
         duration: number;
       }[] = [];
+    const when = live ? ctx.currentTime + 0.1 + lead : 0;
     for (const t of p.tracks) {
+      const motion = ctx.createGain();
+      motion.connect(destination);
+      scheduleMotion(motion.gain, t.volumeMotion, from, when);
       const inputChannels = Math.min(
         2,
         Math.max(
@@ -499,8 +504,9 @@ export class AudioEngine {
         audible(t, p.tracks),
         room,
         inputChannels,
-        destination,
+        motion,
       );
+      c.nodes.push(motion);
       if (live) this.channels.set(t.id, c);
       for (const clip of t.clips) {
         if (clip.muted || clip.start >= until) continue;
@@ -530,7 +536,6 @@ export class AudioEngine {
         if (live) this.sources.push(s);
       }
     }
-    const when = live ? ctx.currentTime + 0.1 + lead : 0;
     for (const step of plan)
       step.source.start(when + step.delay, step.offset, step.duration);
     return when;

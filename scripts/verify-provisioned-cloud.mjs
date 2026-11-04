@@ -69,6 +69,15 @@ try {
   track.role = "beat";
   track.clips[0].level = 1.25;
   track.pan = -0.25;
+  track.volumeMotion = {
+    id: randomUUID(),
+    start: 0,
+    duration: 1,
+    points: [
+      { time: 0, value: 0 },
+      { time: 1, value: 1 },
+    ],
+  };
   const { stockPlugins } = await import("../src/lib/stock-plugins.ts");
   track.plugins = stockPlugins();
   track.plugins.pitch = {

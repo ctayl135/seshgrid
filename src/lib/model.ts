@@ -1,4 +1,5 @@
 import type { StockPlugins } from "./stock-plugins";
+import type { VolumeMotion } from "./volume-motion";
 import type { VocalEffects } from "./presets";
 export type Clip = {
   id: string;
@@ -24,6 +25,7 @@ export type Track = {
   reverb: number;
   fx?: VocalEffects;
   plugins?: StockPlugins;
+  volumeMotion?: VolumeMotion;
   clips: Clip[];
 };
 export type Project = {
@@ -121,6 +123,27 @@ export function validateProject(value: unknown): Project {
     )
       throw new Error("Invalid track");
     ids.add(t.id);
+    if (t.volumeMotion !== undefined) {
+      const m = t.volumeMotion;
+      if (
+        !m ||
+        !/^[a-f0-9-]{36}$/.test(m.id) ||
+        !finite(m.start, 0, 14400) ||
+        !finite(m.duration, 0.01, 14400) ||
+        !Array.isArray(m.points) ||
+        m.points.length < 2 ||
+        m.points.length > 64 ||
+        m.points[0].time !== 0 ||
+        m.points[m.points.length - 1].time !== m.duration ||
+        m.points.some(
+          (v, i) =>
+            !finite(v.time, 0, m.duration) ||
+            !finite(v.value, 0, 1) ||
+            (i > 0 && v.time <= m.points[i - 1].time),
+        )
+      )
+        throw Error("Invalid Volume Motion");
+    }
     if (t.plugins !== undefined) {
       const v = t.plugins;
       if (

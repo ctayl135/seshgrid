@@ -225,3 +225,9 @@ This is an FL-inspired browser audio-editing set, not every FL Studio tool. MIDI
 Highlighting a range now opens a compact Selection actions menu at the pointer. It contains Copy, Cut, Paste at selection start, Loop selection, Mute/unmute, Delete and all six tool modes. Click outside, press Escape or use × to dismiss; right-click the timeline to reopen it for a selection. Paste remains disabled until clips are copied. The full toolbar remains available.
 
 Selected clips can now be dragged directly with Highlight / Select active; Move remains available. Dragging previews the whole selected group, preserves relative timing, follows snap settings and scrolls the timeline near its edges. Release commits one undoable move; pointer cancellation discards the preview. Shift-click still toggles group selection.
+
+## Volume Motion
+
+Volume Motion is NOIR's first automation clip: automatically change track volume for fades, swells and ducking. Select a track and use its Volume Motion panel, or highlight time and choose Create Volume Motion in the mini menu. Fade in, Fade out and Duck and return provide starting curves. Click the curve to add points, adjust point time/volume numerically, or remove interior points. Start/length move and resize the region; the timeline shows a purple Volume Motion strip. One motion region per track is supported, up to 64 linear points. Outside the region the multiplier returns to 100%; track gain, mute and solo remain independent. The region controls the entire channel including its effects.
+
+Motion edits are disabled during playback/recording. Curves are saved in local, cloud and portable projects and used by normal playback, loop rendering and every export format. Automation currently controls volume (0–100%) only; pan, filter and effect automation remain future work. Motion regions do not extend the song past its audio clips.
