@@ -2,7 +2,7 @@
 
 A free browser recording studio built with Next.js, React, TypeScript, Web Audio and Supabase. Phase 1 has no billing, subscriptions, or paid feature gates.
 
-Private development studio: https://seshgrid-lab-ctayl135-6200-stripe.vercel.app. Reuse this address for browser saves and recovery across preview updates. Projects stored at earlier deployment addresses remain there; transfer them using Backup → Open project file.
+Branded private studio: https://new-age-noir-ctayl135-6200-stripe.vercel.app. Existing browser projects remain available at https://seshgrid-lab-ctayl135-6200-stripe.vercel.app, which also runs the renamed app. Reuse this address for browser saves and recovery across preview updates. Projects stored at earlier deployment addresses remain there; transfer them using Backup → Open project file.
 
 ## Run locally
 
