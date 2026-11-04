@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { databaseClient } from "./database-client.mjs";
 let client;
 try {
@@ -9,18 +9,23 @@ try {
   await client.query(
     "create table if not exists seshgrid_internal.migrations (name text primary key, applied_at timestamptz not null default now())",
   );
-  const { rowCount } = await client.query(
-    "select name from seshgrid_internal.migrations where name=$1",
-    ["001_private_projects"],
-  );
-  if (!rowCount) {
-    await client.query(
-      await readFile("supabase/migrations/001_private_projects.sql", "utf8"),
+  const applied = [];
+  for (const file of (await readdir("supabase/migrations"))
+    .filter((f) => /^\d+.*\.sql$/.test(f))
+    .sort()) {
+    const name = file.slice(0, -4);
+    const { rowCount } = await client.query(
+      "select name from seshgrid_internal.migrations where name=$1",
+      [name],
     );
-    await client.query(
-      "insert into seshgrid_internal.migrations(name) values($1)",
-      ["001_private_projects"],
-    );
+    if (!rowCount) {
+      await client.query(await readFile("supabase/migrations/" + file, "utf8"));
+      await client.query(
+        "insert into seshgrid_internal.migrations(name) values($1)",
+        [name],
+      );
+      applied.push(name);
+    }
   }
   await client.query("commit");
   const policies = await client.query(
@@ -33,8 +38,7 @@ try {
     throw new Error("Private storage policy verification failed");
   console.log(
     JSON.stringify({
-      migration: "001_private_projects",
-      applied: !rowCount,
+      migrationsApplied: applied,
       privateBucket: true,
       ownerPolicies: policies.rowCount,
     }),

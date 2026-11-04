@@ -1,3 +1,4 @@
+import { normalizationLevel } from "../src/lib/normalize";
 import { PlaylistPlayer } from "../src/lib/playlist";
 // Runs only in the isolated local test server; never included in the studio build.
 import { AudioEngine } from "../src/lib/audio";
@@ -110,6 +111,22 @@ button.onclick = async () => {
       peak(0) < 0.0001 && peak(1) > 0.04 && peak(1) < 0.06,
       `Export does not preserve capture, gain or pan (L=${peak(0)}, R=${peak(1)})`,
     );
+    track.clips[0].level = normalizationLevel(
+      [samples],
+      recorded.sampleRate,
+      track.clips[0],
+    );
+    const normalized = await context.decodeAudioData(
+      await (await engine.export(project)).arrayBuffer(),
+    );
+    const normalizedPeak = normalized
+      .getChannelData(1)
+      .reduce((m, v) => Math.max(m, Math.abs(v)), 0);
+    check(
+      Math.abs(normalizedPeak - Math.pow(10, -1 / 20) * track.gain) < 0.002,
+      "Clip normalization not applied before track processing",
+    );
+    delete track.clips[0].level;
     const dry = mixed.getChannelData(1);
     for (const preset of VOCAL_PRESETS) {
       project.tracks = [applyVocalPreset(track, preset.id)];
@@ -272,7 +289,7 @@ button.onclick = async () => {
       played.join(",") === "first,second",
       "Actual audio completion did not sequence two songs",
     );
-    status.textContent = `PASS — actual AudioWorklet capture → PCM WAV → decode → offline mix/export. Take: ${recorded.duration.toFixed(3)}s; RMS: ${rms.toFixed(4)}. All eight vocal/adlib presets changed rendered audio with finite samples. Ping-pong echoes alternate left/right at the expected times. Legacy mono/stereo levels are preserved with effects bypassed. Input selection, input metering, stereo mix metering and stopped-node cleanup passed. Two songs automatically advanced using actual audio completion events. No microphone used.`;
+    status.textContent = `PASS — actual AudioWorklet capture → PCM WAV → decode → offline mix/export. Take: ${recorded.duration.toFixed(3)}s; RMS: ${rms.toFixed(4)}. All eight vocal/adlib presets changed rendered audio with finite samples. Ping-pong echoes alternate left/right at the expected times. Legacy mono/stereo levels are preserved with effects bypassed. Input selection, input metering, stereo mix metering and stopped-node cleanup passed. Two songs automatically advanced using actual audio completion events. Non-destructive clip normalization reached the expected rendered peak. No microphone used.`;
     status.dataset.passed = "true";
   } catch (error) {
     status.textContent = `FAIL — ${error instanceof Error ? error.message : String(error)}`;

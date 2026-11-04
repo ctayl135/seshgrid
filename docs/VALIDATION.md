@@ -86,3 +86,12 @@ Meter build deployed Ready at https://seshgrid-mmpfvvvci-ctayl135-6200-stripe.ve
 - The playlist uses a separate audio engine, loads private cloud sources on demand and does not create public media URLs. Cloud access policies are unchanged. Queue order is temporary; gapless playback and background/mobile continuity are not promised.
 
 Projects playlist build is Ready at https://seshgrid-8npx5vubb-ctayl135-6200-stripe.vercel.app and the stable private lab alias. Hosted library retained the previous saved project; search and Play all passed. The existing studio session stayed untouched. Vercel Authentication remains active for all deployments.
+
+## NEW AGE NOIR expansion — November 3, 2026
+
+- Rebranded the product as NEW AGE NOIR by New Age Music. Kept original browser database and backup identifiers for compatibility.
+- All 28 automated tests pass, including trimmed/multichannel normalization, bounded gain, source immutability, clip-level split/portable persistence and profile validation.
+- Real-browser audio integration confirms that normalized clip gain reaches its expected exported peak while capture, all presets, stereo metering and playlist completion remain correct.
+- Applied migration 002 to the existing Supabase Free project. Live checks passed for profile save, mix publish, member playback, anonymous denial, cross-owner profile/release edit denial, unpublish access denial and republish. Existing private project isolation and byte-exact source save/reopen still pass, now including clip gain and beat roles. An initial cached download after unpublish was caught and fixed by setting cacheControl=0 on new shared uploads.
+- Browser UI checks passed for temporary account sign-in, profile save, Beat Lab presets, Normalize clip, Duplicate clip, explicit publication, actual feed audio playback and unpublish/republish controls. Only generated test audio was published. Temporary accounts and shared test files were removed. No user voice recordings were published or committed.
+- The feed is a member-only discovery list prioritizing profile genre among the latest 100 releases. Four-minute/50 MB publishing safety limits, signed-link expiry and broader device testing remain documented.

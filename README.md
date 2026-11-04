@@ -1,4 +1,4 @@
-# SeshGrid
+# NEW AGE NOIR — by New Age Music
 
 A free browser recording studio built with Next.js, React, TypeScript, Web Audio and Supabase. Phase 1 has no billing, subscriptions, or paid feature gates.
 
@@ -41,6 +41,22 @@ Select a vocal track, then choose a sound in the channel strip's **UNDERGROUND**
 
 Settings are stored in an optional `fx` field in the existing version-1 track manifest. Older projects without this field stay dry, and save/reopen/portable backups preserve the new controls. Playback and offline export use the same effect graph. Echo feedback is bounded for stability and the exporter retains the decaying tail.
 
+## Artist profiles and For You
+
+The app is now branded **NEW AGE NOIR**, by **New Age Music**. The existing repository, internal browser database and .sesh backup format retain their identifiers so previous sessions keep working.
+
+Profile lets a signed-in artist save a display name, bio and preferred genre. For You lists opted-in releases from members, putting the listener's genre first, with a genre filter and artist profile links. It is a simple discovery feed over the latest 100 releases, not a trained recommendation system. Artist pages display their releases; owners can unpublish and republish.
+
+To share: create your profile, open an audio session, click Publish, choose title/genre and explicitly confirm sharing permission. Only a rendered stereo mix is uploaded to the separate private shared-mixes bucket. Individual takes and project manifests remain owner-only. During private testing the feed requires a signed-in account and Vercel access; public signup/email configuration remains deferred. Feed playback uses one-minute signed URLs. New uploads use cacheControl=0; unpublishing blocks new member downloads while already issued playback links can last up to one minute. A listener may keep any audio they have already downloaded.
+
+The first release supports up to four minutes and 50 MB per published WAV. This is a browser/memory and storage safety limit, not a paid tier. Run migrations in order, including supabase/migrations/002_artist_feed.sql, or use node scripts/migrate-cloud.mjs, which now tracks all numbered SQL migrations. Migration 002 adds artist profiles, release metadata, indexes and owner/member-scoped storage policies without changing private project policies. No new API key is needed.
+
+## Beat Lab and clip tools
+
+Imported audio starts as a beat track. Choose Beat, Lead vocal or Adlib in Track type for existing tracks. The sidebar separates Beats, Vocals and Adlibs. Beat Lab provides low/high cuts, glue compression, saturation and Clean beat, 808 weight and Dusty tape starting sounds. Each track has independent volume, EQ, effects and mute/solo controls; a beat change does not alter the vocal settings.
+
+Select a clip and choose Normalize clip to bring its loudest source sample toward -1 dBFS before track effects. The calculation respects source trim and all channels, rejects silence and caps gain at 32x. Original source bytes stay intact. Reset clip gain, undo/redo, save/reopen, portable backups, cloud persistence and WAV export all retain this non-destructive clip level. This is peak normalization, not loudness matching or automatic mastering; track EQ/effects and overlapping clips can still create clipping. Duplicate clip places a copy directly after the selected clip; Snap start to beat rounds its timeline start to the nearest beat at the session tempo without time-stretching its source.
+
 ## Projects and playlist
 
 Open Projects for the saved-song library. Search your projects, open one in the studio, or choose Play all. Queue adds individual songs; move songs up or remove them while playback is stopped. Pause/Resume, Next song and Stop control the playlist. The next song starts automatically after the current mix and its effects finish; the final song ends the playlist.
@@ -67,7 +83,7 @@ The SeshGrid workspace now has a provisioned Supabase Free project. Its owner-on
 
 No service credentials are included. Create/connect a Supabase project, then:
 
-1. Run `supabase/migrations/001_private_projects.sql` in its SQL editor (once, on a new project). It creates the projects table, private `project-audio` bucket, owner-only RLS policies, and explicit authenticated database grants. Never change this bucket to public.
+1. Run `supabase/migrations/001_private_projects.sql` and then `supabase/migrations/002_artist_feed.sql` in its SQL editor (once, on a new project). It creates the projects table, private `project-audio` bucket, owner-only RLS policies, and explicit authenticated database grants. Never change this bucket to public.
 2. Enable email authentication and email confirmation. Set the Auth Site URL to your deployment URL and allow your local/deployed URLs as redirect URLs. Configure an email provider if your usage requires it.
 3. Copy `.env.example` to `.env.local`. Set `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` from your project's API settings. These are browser-facing values whose access is constrained by RLS. Never put a service-role key, secret API key, database password, or email credentials in any `NEXT_PUBLIC_` variable.
 4. Restart development/build after setting variables. Create an account, confirm email and sign in. A magic sign-in link is available for existing accounts.

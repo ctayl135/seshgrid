@@ -1298,3 +1298,267 @@ footer > span:last-child {
     padding: 24px 16px;
   }
 }
+
+.brand {
+  font-size: 17px;
+  letter-spacing: -0.5px;
+  flex-wrap: wrap;
+}
+.brand small {
+  font-size: 8px;
+}
+.nav-link {
+  font-size: 12px;
+  color: #ccd4c7;
+  text-decoration: none;
+  padding: 8px;
+}
+.header-actions {
+  flex-wrap: wrap;
+}
+header {
+  gap: 14px;
+}
+.track-role {
+  display: grid;
+  gap: 8px;
+  margin: 16px 0;
+  color: #aeb8c4;
+  font-size: 12px;
+}
+.track-role select,
+.beat-rack select {
+  background: #13181b;
+  color: #eee;
+  border: 1px solid #40484e;
+  padding: 8px;
+  border-radius: 6px;
+}
+.beat-rack {
+  padding: 16px 0;
+  border-block: 1px solid #343c42;
+  margin-block: 16px;
+}
+.beat-rack h3 {
+  font-size: 15px;
+}
+.beat-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.beat-presets button {
+  font-size: 11px;
+  padding: 7px;
+}
+.beat-rack label {
+  display: block;
+  font-size: 12px;
+  color: #b9c2cc;
+  margin-top: 15px;
+}
+.beat-rack output {
+  float: right;
+}
+.beat-rack input {
+  width: 100%;
+  margin-top: 8px;
+  accent-color: #c6f778;
+}
+.social-page {
+  min-height: 100vh;
+  max-width: 1280px;
+  margin: auto;
+  padding: 24px 40px;
+  background: radial-gradient(ellipse at top right, #263222 0, transparent 50%);
+}
+.social-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: center;
+  padding-bottom: 25px;
+  border-bottom: 1px solid #30393b;
+}
+.social-nav > div {
+  display: flex;
+  gap: 25px;
+}
+.social-page a {
+  color: #c6f778;
+  text-decoration: none;
+}
+.social-hero {
+  display: block;
+  border: 0;
+  background: none;
+  padding: 60px 0 35px;
+}
+.social-hero h1 {
+  font-size: clamp(34px, 6vw, 72px);
+  line-height: 1.05;
+  max-width: 900px;
+  margin: 18px 0;
+}
+.social-hero p {
+  color: #aeb9c2;
+  max-width: 660px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+.social-card {
+  padding: 24px;
+  background: #1a2024;
+  border: 1px solid #3b4648;
+  border-radius: 14px;
+  margin-bottom: 25px;
+}
+.profile-form {
+  display: grid;
+  gap: 15px;
+  max-width: 650px;
+}
+.profile-form label {
+  display: grid;
+  gap: 8px;
+  color: #b7c1ca;
+  font-size: 13px;
+}
+.profile-form input,
+.profile-form textarea,
+.social-page select,
+.modal select {
+  background: #101619;
+  color: #eef2ec;
+  border: 1px solid #46514e;
+  padding: 10px;
+  border-radius: 7px;
+}
+.profile-form textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+.release-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 22px;
+  margin-top: 22px;
+}
+.release-card {
+  background: #1a2024;
+  border: 1px solid #394340;
+  border-radius: 12px;
+  padding: 18px;
+  overflow: hidden;
+}
+.release-card h3 {
+  font-size: 24px;
+  margin: 12px 0;
+  overflow-wrap: anywhere;
+}
+.release-art {
+  height: 155px;
+  background: linear-gradient(135deg, #3d294e, #171e25 60%, #546b2c);
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 55px;
+  color: #d3f29c;
+  margin-bottom: 18px;
+}
+.release-card audio {
+  width: 100%;
+  margin-top: 15px;
+}
+.release-card button {
+  margin: 8px 5px 0 0;
+}
+.release-card p {
+  color: #8d9b9c;
+  font-size: 12px;
+}
+.social-error {
+  color: #ff9a9a;
+}
+.social-page footer {
+  padding: 55px 0 20px;
+  color: #8a979c;
+  font-size: 11px;
+  letter-spacing: 2px;
+}
+.publish-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  line-height: 1.5;
+}
+.publish-consent input {
+  width: auto;
+  flex: none;
+}
+@media (max-width: 700px) {
+  .social-page {
+    padding: 20px;
+  }
+  .social-nav {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 15px;
+  }
+  .social-hero {
+    padding-top: 30px;
+  }
+  .social-page .library-heading {
+    flex-wrap: wrap;
+  }
+  .brand {
+    font-size: 15px;
+  }
+}
+
+.session-track-groups {
+  padding: 0 20px 20px;
+}
+.session-track-groups section {
+  margin-top: 20px;
+}
+.session-track-groups h3 {
+  font-size: 10px;
+  letter-spacing: 1.5px;
+  color: #bdde9a;
+}
+.session-track-groups button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin: 5px 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.session-track-groups button[aria-pressed="true"] {
+  border-color: #b7de78;
+  color: #d6f7a9;
+}
+.session-track-groups p {
+  font-size: 11px;
+  color: #75818b;
+}
+.role-badge {
+  font-size: 8px;
+  color: #b0c98c;
+  text-transform: uppercase;
+}
+.social-hero {
+  height: auto;
+}
+.brand > span:not(.logo) {
+  margin-left: 5px;
+}
+textarea,
+select {
+  font: inherit;
+}
+.session-track-groups {
+  max-height: 300px;
+  overflow: auto;
+}

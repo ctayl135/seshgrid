@@ -12,6 +12,9 @@ const accounts = ["A", "B"].map((suffix) => ({
 let studio;
 let projectId;
 let audioPath;
+let sharedPath;
+let secondClient;
+let anonymous;
 try {
   await client.query("begin");
   for (const a of accounts) {
@@ -59,6 +62,8 @@ try {
   track.clips = [
     { id: randomUUID(), assetId, start: 0.5, offset: 0, duration: 0.1 },
   ];
+  track.role = "beat";
+  track.clips[0].level = 1.25;
   track.pan = -0.25;
   track.reverb = 0.1;
   project.tracks = [track];
@@ -79,6 +84,111 @@ try {
     Buffer.from(await restored.assets[0].blob.arrayBuffer()),
     Buffer.from(await blob.arrayBuffer()),
   );
+  const social = await import("../src/lib/social.ts");
+  await social.saveProfile(
+    accounts[0].id,
+    "Temporary Noir Artist",
+    "Generated-audio security fixture",
+    "Rage",
+  );
+  assert.equal(
+    (await social.getProfile(accounts[0].id)).display_name,
+    "Temporary Noir Artist",
+  );
+  const releaseId = await social.publishMix(
+    accounts[0].id,
+    "Temporary synthetic release",
+    "Rage",
+    blob,
+  );
+  sharedPath = accounts[0].id + "/" + releaseId + "/mix.wav";
+  assert.ok((await social.releases()).some((p) => p.id === releaseId));
+  assert.ok((await social.listenURL(sharedPath)).startsWith("https://"));
+  const { createClient } = await import("@supabase/supabase-js");
+  const opts = {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  };
+  secondClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    opts,
+  );
+  anonymous = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    opts,
+  );
+  assert.equal(
+    (
+      await secondClient.auth.signInWithPassword({
+        email: accounts[1].email,
+        password: accounts[1].password,
+      })
+    ).error,
+    null,
+  );
+  assert.equal(
+    (await secondClient.storage.from("shared-mixes").download(sharedPath))
+      .error,
+    null,
+    "Members can listen to opted-in published mixes",
+  );
+  const changed = await secondClient
+    .from("artist_profiles")
+    .update({ display_name: "Unauthorized overwrite" })
+    .eq("id", accounts[0].id)
+    .select();
+  assert.equal(
+    changed.data?.length ?? 0,
+    0,
+    "Other artists cannot overwrite profiles",
+  );
+  const changedPost = await secondClient
+    .from("feed_posts")
+    .update({ title: "Unauthorized overwrite" })
+    .eq("id", releaseId)
+    .select();
+  assert.equal(
+    changedPost.data?.length ?? 0,
+    0,
+    "Other artists cannot change releases",
+  );
+  const anonPosts = await anonymous.from("feed_posts").select("id");
+  assert.ok(
+    anonPosts.error || !anonPosts.data?.length,
+    "Anonymous users cannot read feed metadata",
+  );
+  assert.ok(
+    (await anonymous.storage.from("shared-mixes").download(sharedPath)).error,
+    "Anonymous users cannot download mixes",
+  );
+  await social.setPublished(releaseId, false);
+  assert.ok(
+    !(await social.releases()).some((p) => p.id === releaseId),
+    "Unpublished releases leave the feed",
+  );
+  assert.ok(
+    (await secondClient.storage.from("shared-mixes").download(sharedPath))
+      .error,
+    "Other members cannot download unpublished mixes",
+  );
+  assert.equal(
+    (await studio.storage.from("shared-mixes").download(sharedPath)).error,
+    null,
+    "Owners retain unpublished mixes",
+  );
+  await social.setPublished(releaseId, true);
+  assert.ok(
+    (await social.releases()).some((p) => p.id === releaseId),
+    "Owners can republish",
+  );
+  console.log(
+    "Live artist/feed checks passed: profile save, mix publish, member playback, anonymous denial, owner-only edits, unpublish denial and republish.",
+  );
   console.log(
     "Live studio workflow passed: password sign-in, source upload, repeated save, project listing, reopening and byte-for-byte audio restoration.",
   );
@@ -90,11 +200,15 @@ try {
   process.exitCode = 1;
 } finally {
   if (studio?.auth) {
+    if (sharedPath)
+      await studio.storage.from("shared-mixes").remove([sharedPath]);
     if (audioPath)
       await studio.storage.from("project-audio").remove([audioPath]);
     if (projectId) await studio.from("projects").delete().eq("id", projectId);
     await studio.auth.signOut();
   }
+  await secondClient?.auth.signOut();
+  await anonymous?.auth.signOut();
   // Delete exactly the temporary fixture identities created by this run.
   await client.query("delete from auth.users where id = any($1::uuid[])", [
     accounts.map((a) => a.id),

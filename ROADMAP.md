@@ -1,4 +1,4 @@
-# Phase 1 roadmap
+# NEW AGE NOIR roadmap
 
 ## Milestone 1 — recording workflow
 
@@ -24,6 +24,14 @@
 - [ ] Broaden interruption recovery, device/browser compatibility and latency testing.
 - [x] Push the implementation and automated checks to the private GitHub repository.
 - [x] Deploy a private Vercel build and verify HTTPS page/assets with access protection enabled.
+
+## Requested studio and discovery expansion
+
+- [x] NEW AGE NOIR branding by New Age Music.
+- [x] Beat/vocal/adlib sections and independent Beat Lab controls.
+- [x] Non-destructive clip normalization, duplication and beat-grid start snapping.
+- [x] Artist profiles and member-only For You discovery with opted-in mix publication.
+- [x] Live tests for owner-only profile/release changes and published/unpublished media access.
 
 ## Stabilization
 

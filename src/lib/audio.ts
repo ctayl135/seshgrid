@@ -352,7 +352,10 @@ export class AudioEngine {
         if (duration <= 0) continue;
         const s = ctx.createBufferSource();
         s.buffer = b;
-        s.connect(c.input);
+        const clipGain = ctx.createGain();
+        clipGain.gain.value = clip.level ?? 1;
+        s.connect(clipGain).connect(c.input);
+        c.nodes.push(clipGain);
         plan.push({
           source: s,
           delay: Math.max(0, clip.start - from),

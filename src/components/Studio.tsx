@@ -26,6 +26,11 @@ import { MicrophoneCapture } from "@/lib/capture";
 import { packSession, unpackSession } from "@/lib/portable";
 import Waveform from "./Waveform";
 import VocalRack from "./VocalRack";
+import BeatRack from "./BeatRack";
+import PublishPanel from "./PublishPanel";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { normalizationLevel } from "@/lib/normalize";
 import LevelMeter from "./LevelMeter";
 import ProjectLibrary from "./ProjectLibrary";
 import MicrophoneInput from "./MicrophoneInput";
@@ -47,6 +52,7 @@ function download(blob: Blob, name: string) {
   setTimeout(() => URL.revokeObjectURL(url), 3000);
 }
 export default function Studio() {
+  const router = useRouter();
   const editor = useProjectEditor(),
     project = editor.project,
     setProject = editor.reset;
@@ -62,7 +68,7 @@ export default function Studio() {
     ),
     [error, setError] = useState(""),
     [user, setUser] = useState<User | null>(null),
-    [modal, setModal] = useState<"projects" | "auth" | null>(null),
+    [modal, setModal] = useState<"projects" | "auth" | "publish" | null>(null),
     [local, setLocal] = useState<SavedSession[]>([]),
     [cloud, setCloud] = useState<
       { id: string; name: string; updated_at: string }[]
@@ -80,6 +86,17 @@ export default function Studio() {
   } | null>(null);
   const ask = (message: string) =>
     new Promise<boolean>((resolve) => setConfirmation({ message, resolve }));
+  const navigate = async (path: string) => {
+    if (recording || busy) return;
+    if (
+      dirty &&
+      !(await ask(
+        "Leave the studio with unsaved changes? Save or download a backup first if you need a permanent copy.",
+      ))
+    )
+      return;
+    router.push(path);
+  };
   const engine = useRef<AudioEngine | null>(null),
     assets = useRef(new Map<string, Blob>()),
     fileInput = useRef<HTMLInputElement>(null),
@@ -276,6 +293,7 @@ export default function Studio() {
             "Source audio must be between 1 millisecond and 4 hours long.",
           );
         const t = newTrack(file.name.replace(/\.[^.]+$/, ""));
+        t.role = "beat";
         t.clips = [
           {
             id: crypto.randomUUID(),
@@ -472,7 +490,7 @@ export default function Studio() {
           : "Project reopened with source audio and mix settings.",
       );
     });
-  if (!project) return <main className="loading">Opening SeshGrid…</main>;
+  if (!project) return <main className="loading">Opening NEW AGE NOIR…</main>;
   const track = project.tracks.find((t) => t.id === selected),
     clip = project.tracks.flatMap((t) => t.clips).find((c) => c.id === clipId),
     width = Math.max(900, (projectEnd(project) + 15) * PX),
@@ -516,8 +534,8 @@ export default function Studio() {
       />
       <header>
         <a className="brand" href="/" onClick={(e) => e.preventDefault()}>
-          <span className="logo">▥</span> sesh<span>grid</span>
-          <small>STUDIO</small>
+          <span className="logo">▥</span> NEW AGE <span>NOIR</span>
+          <small>BY NEW AGE MUSIC</small>
         </a>
         <div className="project-title">
           <input
@@ -542,6 +560,32 @@ export default function Studio() {
           </span>
         </div>
         <div className="header-actions">
+          <Link
+            className="nav-link"
+            href="/fyp"
+            onClick={(e) => {
+              e.preventDefault();
+              void navigate("/fyp");
+            }}
+          >
+            For You
+          </Link>
+          <Link
+            className="nav-link"
+            href="/profile"
+            onClick={(e) => {
+              e.preventDefault();
+              void navigate("/profile");
+            }}
+          >
+            Profile
+          </Link>
+          <button
+            disabled={locked || !projectEnd(project)}
+            onClick={() => setModal("publish")}
+          >
+            Publish
+          </button>
           <button disabled={locked} onClick={openProjects}>
             Projects
           </button>
@@ -562,7 +606,7 @@ export default function Studio() {
               run(async () => {
                 download(
                   await engine.current!.export(project),
-                  `${project.name || "SeshGrid"}.wav`,
+                  `${project.name || "New Age Noir"}.wav`,
                 );
                 setMessage(
                   "WAV exported at 44.1 kHz, 16-bit stereo. Peaks above 0 dBFS are clipped; lower track levels if distorted.",
@@ -700,6 +744,37 @@ export default function Studio() {
               Add empty vocal track
             </button>
           </div>
+          <div className="session-track-groups">
+            {(["beat", "vocal", "adlib"] as const).map((role) => (
+              <section key={role} aria-label={role + " tracks"}>
+                <h3>
+                  {role === "beat"
+                    ? "BEATS"
+                    : role === "vocal"
+                      ? "VOCALS"
+                      : "ADLIBS"}
+                </h3>
+                {project.tracks
+                  .filter((t) => (t.role ?? "vocal") === role)
+                  .map((t) => (
+                    <button
+                      key={t.id}
+                      disabled={locked}
+                      aria-pressed={selected === t.id}
+                      onClick={() => {
+                        select(t.id);
+                        selectClip("");
+                      }}
+                    >
+                      {t.name}
+                    </button>
+                  ))}
+                {!project.tracks.some((t) => (t.role ?? "vocal") === role) && (
+                  <p>No {role} tracks yet</p>
+                )}
+              </section>
+            ))}
+          </div>
           <div className="session-info">
             <span>SESSION NOTES</span>
             <p>
@@ -803,6 +878,7 @@ export default function Studio() {
                   <div className="lane-label">
                     <span>{String(i + 1).padStart(2, "0")}</span>
                     <b>{t.name}</b>
+                    <small className="role-badge">{t.role ?? "vocal"}</small>
                     <button
                       aria-label={`Mute ${t.name}`}
                       aria-pressed={t.mute}
@@ -911,6 +987,81 @@ export default function Studio() {
                   (duration) => patchClip(clip.id, (c) => ({ ...c, duration })),
                 )}
                 <button
+                  disabled={locked}
+                  onClick={() => {
+                    try {
+                      const b = engine.current!.buffers.get(clip.assetId);
+                      if (!b) throw new Error("Clip audio is missing");
+                      const level = normalizationLevel(
+                        Array.from({ length: b.numberOfChannels }, (_, i) =>
+                          b.getChannelData(i),
+                        ),
+                        b.sampleRate,
+                        clip,
+                      );
+                      patchClip(clip.id, (c) => ({ ...c, level }));
+                      setMessage(
+                        "Clip normalized toward −1 dBFS before track effects. Source audio is unchanged.",
+                      );
+                    } catch (e) {
+                      setError(e instanceof Error ? e.message : String(e));
+                    }
+                  }}
+                >
+                  Normalize clip
+                </button>
+                <button
+                  disabled={locked || clip.level === undefined}
+                  onClick={() =>
+                    patchClip(clip.id, (c) => ({ ...c, level: undefined }))
+                  }
+                >
+                  Reset clip gain
+                </button>
+                <span className="hint">
+                  Clip gain: {(20 * Math.log10(clip.level ?? 1)).toFixed(1)} dB
+                </span>
+                <button
+                  disabled={locked || clip.start + clip.duration * 2 > 14400}
+                  onClick={() =>
+                    edit((p) => ({
+                      ...p,
+                      tracks: p.tracks.map((t) => ({
+                        ...t,
+                        clips: t.clips.flatMap((c) =>
+                          c.id === clip.id
+                            ? [
+                                c,
+                                {
+                                  ...c,
+                                  id: crypto.randomUUID(),
+                                  start: c.start + c.duration,
+                                },
+                              ]
+                            : [c],
+                        ),
+                      })),
+                    }))
+                  }
+                >
+                  Duplicate clip
+                </button>
+                <button
+                  disabled={locked}
+                  onClick={() =>
+                    patchClip(clip.id, (c) => ({
+                      ...c,
+                      start: Math.min(
+                        14400,
+                        Math.round(c.start / (60 / project.bpm)) *
+                          (60 / project.bpm),
+                      ),
+                    }))
+                  }
+                >
+                  Snap start to beat
+                </button>
+                <button
                   disabled={
                     locked ||
                     position <= clip.start ||
@@ -990,11 +1141,36 @@ export default function Studio() {
                   Solo
                 </button>
               </div>
-              <VocalRack
-                track={track}
-                disabled={busy}
-                update={(patch) => patchTrack(track.id, patch)}
-              />
+              <label className="track-role">
+                Track type
+                <select
+                  aria-label="Track type"
+                  disabled={locked}
+                  value={track.role ?? "vocal"}
+                  onChange={(e) =>
+                    patchTrack(track.id, {
+                      role: e.target.value as Track["role"],
+                    })
+                  }
+                >
+                  <option value="beat">Beat / instrumental</option>
+                  <option value="vocal">Lead vocal</option>
+                  <option value="adlib">Adlib</option>
+                </select>
+              </label>
+              {track.role === "beat" ? (
+                <BeatRack
+                  track={track}
+                  disabled={busy}
+                  update={(patch) => patchTrack(track.id, patch)}
+                />
+              ) : (
+                <VocalRack
+                  track={track}
+                  disabled={busy}
+                  update={(patch) => patchTrack(track.id, patch)}
+                />
+              )}
               {(
                 [
                   [
@@ -1089,7 +1265,7 @@ export default function Studio() {
       </div>
       <footer>
         <span role="status">{busy ? "Working…" : message}</span>
-        <span>SESHGRID · PHASE 01</span>
+        <span>NEW AGE NOIR · BY NEW AGE MUSIC</span>
       </footer>
       {error && (
         <div role="alert" className="error">
@@ -1105,15 +1281,25 @@ export default function Studio() {
             className={modal === "projects" ? "modal projects-view" : "modal"}
             role="dialog"
             aria-modal="true"
-            aria-label={modal === "auth" ? "Account" : "Saved projects"}
+            aria-label={
+              modal === "auth"
+                ? "Account"
+                : modal === "publish"
+                  ? "Publish mix"
+                  : "Saved projects"
+            }
           >
-            <button className="close" onClick={() => setModal(null)}>
+            <button
+              className="close"
+              disabled={busy}
+              onClick={() => setModal(null)}
+            >
               ×
             </button>
             {modal === "auth" ? (
               <>
                 <span className="eyebrow">YOUR SPACE TO CREATE</span>
-                <h2>{user ? "Your account" : "Welcome to SeshGrid"}</h2>
+                <h2>{user ? "Your account" : "Welcome to NEW AGE NOIR"}</h2>
                 {!supabase ? (
                   <p>
                     Cloud accounts need Supabase configuration. Local recording,
@@ -1225,6 +1411,14 @@ export default function Studio() {
                   </form>
                 )}
               </>
+            ) : modal === "publish" ? (
+              <PublishPanel
+                user={user}
+                project={project}
+                render={() => engine.current!.export(project)}
+                onBusy={setBusy}
+                navigate={(path) => void navigate(path)}
+              />
             ) : (
               <>
                 <h2>Your projects</h2>

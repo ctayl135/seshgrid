@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 export const metadata: Metadata = {
-  title: "SeshGrid — Your sound starts here",
+  title: "NEW AGE NOIR — by New Age Music",
   description:
-    "A free multitrack recording studio. Record, mix, and export your music.",
+    "Underground music, made here. Record, shape beats, mix, and share your sound with NEW AGE NOIR by New Age Music.",
 };
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (

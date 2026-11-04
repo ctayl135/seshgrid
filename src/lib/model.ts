@@ -5,10 +5,12 @@ export type Clip = {
   start: number;
   offset: number;
   duration: number;
+  level?: number;
 };
 export type Track = {
   id: string;
   name: string;
+  role?: "beat" | "vocal" | "adlib";
   gain: number;
   pan: number;
   mute: boolean;
@@ -42,6 +44,7 @@ export function newTrack(name: string): Track {
   return {
     id: crypto.randomUUID(),
     name,
+    role: "vocal",
     gain: 0.8,
     pan: 0,
     mute: false,
@@ -99,6 +102,7 @@ export function validateProject(value: unknown): Project {
       typeof t.id !== "string" ||
       ids.has(t.id) ||
       typeof t.name !== "string" ||
+      (t.role !== undefined && !["beat", "vocal", "adlib"].includes(t.role)) ||
       !finite(t.gain, 0, 2) ||
       !finite(t.pan, -1, 1) ||
       !finite(t.low, -12, 12) ||
@@ -134,7 +138,8 @@ export function validateProject(value: unknown): Project {
         !/^[a-f0-9-]{36}$/.test(c.assetId) ||
         !finite(c.start, 0, 14400) ||
         !finite(c.offset, 0, 14400) ||
-        !finite(c.duration, 0.001, 14400)
+        !finite(c.duration, 0.001, 14400) ||
+        (c.level !== undefined && !finite(c.level, 0, 32))
       )
         throw new Error("Invalid clip");
       ids.add(c.id);
