@@ -118,3 +118,12 @@ Private deployment dpl_4fwg1bQJWd5esvnRsSQF8PZdV3Mg is Ready and assigned to bot
 The browser recipient accepted the invitation, reopened the shared source audio and successfully saved a title edit to the owner’s cloud project. Temporary UI accounts, beat posts, shared source files, messages and invitations were removed after verification.
 
 Community deployment dpl_7SKr3CWqNxPTrBC3o2BireHm8Kzq is Ready and assigned to both existing private studio addresses. Hosted Home → Beats → DMs → Notifications navigation and account gating passed. Vercel Authentication remains enabled, and public signup remains deferred. No new API keys or paid resources were required.
+
+## Recording and stock plugins — November 4, 2026
+
+- All 36 automated tests, TypeScript and production build pass; browser bundle scan finds no private credentials. Tests cover pitch accuracy/duration, stereo phase, unvoiced noise, bypass, cleanup processing, take switching, count-in scheduling and backup validation.
+- Actual browser AudioWorklet integration passes generated-input count-in capture, muted-take mixing, Pitch Lock WAV export, loop wrap/stop, existing effects and playlist completion. No user voice was used.
+- Browser UI checks pass synthetic session import, take switching, A-minor Smooth minor settings, loop play/pause and local save/reopen. Live cloud round-trip includes plugin settings/take metadata and byte-exact source restoration; the existing three-account privacy, DM, beat, invitation and revision matrix passes. Temporary cloud fixtures were removed.
+- Pitch correction currently processes playback/export, not live input. Physical microphone latency, subjective vocal quality, mobile/background behavior and interruption recovery still need broader device testing. Loops audition a fixed rendered region; recording remains linear.
+
+Private deployment dpl_HFZDfEAJA1rveXGFKhRLhDwTssq3 is Ready and assigned to both existing private studio addresses. Hosted synthetic session import, Hard tune/key/scale controls and actual WAV download passed. Vercel Authentication remains enabled. No new keys, migrations or paid resources were required.

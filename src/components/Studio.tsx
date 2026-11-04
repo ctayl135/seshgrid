@@ -7,6 +7,8 @@ import {
   newTrack,
   projectEnd,
   splitClip,
+  addRecordingTake,
+  activateTake,
   validateProject,
   type Project,
   type Track,
@@ -27,6 +29,7 @@ import { packSession, unpackSession } from "@/lib/portable";
 import Waveform from "./Waveform";
 import VocalRack from "./VocalRack";
 import BeatRack from "./BeatRack";
+import StockRack from "./StockRack";
 import PublishPanel from "./PublishPanel";
 import InvitePanel from "./InvitePanel";
 import { beatSession } from "@/lib/community";
@@ -93,6 +96,14 @@ export default function Studio({
     >([]),
     [email, setEmail] = useState(""),
     [password, setPassword] = useState("");
+  const [countIn, setCountIn] = useState(1),
+    [metronome, setMetronome] = useState(false),
+    [armed, setArmed] = useState(""),
+    [countdown, setCountdown] = useState(0),
+    [rulerBars, setRulerBars] = useState(true),
+    [loopEnabled, setLoopEnabled] = useState(false),
+    [loopStart, setLoopStart] = useState(0),
+    [loopEnd, setLoopEnd] = useState(8);
   const [microphoneId, setMicrophoneId] = useState("");
   const readInputPeak = useRef(
     () => recorder.current?.capture.peak() ?? 0,
@@ -117,12 +128,14 @@ export default function Studio({
   };
   const engine = useRef<AudioEngine | null>(null),
     assets = useRef(new Map<string, Blob>()),
+    playButton = useRef<HTMLButtonElement>(null),
     fileInput = useRef<HTMLInputElement>(null),
     projectInput = useRef<HTMLInputElement>(null),
     recorder = useRef<{
       capture: MicrophoneCapture;
       track: string;
       start: number;
+      when: number;
     } | null>(null),
     latest = useRef(project),
     recordFlag = useRef(false),
@@ -171,8 +184,15 @@ export default function Studio({
     const tick = () => {
       const time = engine.current!.time();
       setPosition(time);
+      setCountdown(
+        Math.ceil(
+          (engine.current!.secondsUntilStart() * (latest.current?.bpm ?? 120)) /
+            60,
+        ),
+      );
       if (
         !recordFlag.current &&
+        !engine.current!.looping &&
         time >= projectEnd(latest.current!) + effectTail(latest.current!.tracks)
       ) {
         engine.current?.stop();
@@ -292,6 +312,7 @@ export default function Studio({
     engine.current?.stop();
     transportFlag.current = false;
     setPlaying(false);
+    setCountdown(0);
   };
   const addTrack = () => {
     if (project!.tracks.length >= 128) {
@@ -340,6 +361,12 @@ export default function Studio({
     });
   const startRecording = () =>
     run(async () => {
+      if (readOnly) throw new Error("Editor access is required to record");
+      if (
+        !project!.tracks.some((t) => t.id === armed && t.role !== "beat") &&
+        project!.tracks.length >= 128
+      )
+        throw new Error("This session has reached the 128-track limit");
       stop();
       const ctx = await engine.current!.ready(),
         capture = new MicrophoneCapture(ctx);
@@ -352,16 +379,28 @@ export default function Studio({
             void stopRecording();
           }
         }, microphoneId);
-        let track = project!.tracks.find((t) => t.id === selected);
+        let track = project!.tracks.find(
+          (t) => t.id === armed && t.role !== "beat",
+        );
         if (!track) {
           track = newTrack(`Vocal ${project!.tracks.length + 1}`);
           const t = track;
           edit((p) => ({ ...p, tracks: [...p.tracks, t] }));
           select(track.id);
         }
-        const when = await engine.current!.play(project!, position);
+        setArmed(track.id);
+        const backing = {
+          ...project!,
+          tracks: project!.tracks.map((t) =>
+            t.id === track!.id ? { ...t, clips: [], solo: false } : t,
+          ),
+        };
+        const when = await engine.current!.play(backing, position, undefined, {
+          countInBeats: countIn * 4,
+          metronome,
+        });
         capture.start(when);
-        recorder.current = { capture, track: track.id, start: position };
+        recorder.current = { capture, track: track.id, start: position, when };
         recordFlag.current = true;
         transportFlag.current = true;
         setRecording(true);
@@ -377,7 +416,15 @@ export default function Studio({
     const take = recorder.current;
     if (!take || !recordFlag.current) return;
     recordFlag.current = false;
+    const cancelled = (engine.current?.context?.currentTime ?? 0) < take.when;
     stop();
+    if (cancelled) {
+      take.capture.dispose();
+      recorder.current = null;
+      setRecording(false);
+      setMessage("Count-in cancelled. No take was recorded.");
+      return;
+    }
     void run(async () => {
       try {
         const blob = await take.capture.stop(),
@@ -394,7 +441,7 @@ export default function Studio({
         edit((p) => ({
           ...p,
           tracks: p.tracks.map((t) =>
-            t.id === take.track ? { ...t, clips: [...t.clips, clip] } : t,
+            t.id === take.track ? addRecordingTake(t, clip) : t,
           ),
         }));
         selectClip(clip.id);
@@ -587,6 +634,35 @@ export default function Studio({
     } else if (initialDialog === "projects") openProjects();
     else if (initialDialog === "auth") setModal("auth");
   }, [project, authReady, initialSession, initialDialog, user]);
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (
+        e.ctrlKey ||
+        e.metaKey ||
+        e.altKey ||
+        e.repeat ||
+        modal ||
+        confirmation ||
+        busy ||
+        target?.closest(
+          'input,textarea,select,button,a,[contenteditable="true"]',
+        )
+      )
+        return;
+      if (e.code === "Space") {
+        e.preventDefault();
+        if (recordFlag.current) stopRecording();
+        else playButton.current?.click();
+      } else if (e.key.toLowerCase() === "r" && !readOnly) {
+        e.preventDefault();
+        if (recordFlag.current) stopRecording();
+        else void startRecording();
+      }
+    };
+    window.addEventListener("keydown", key);
+    return () => window.removeEventListener("keydown", key);
+  });
   if (!project) return <main className="loading">Opening NOIR…</main>;
   const track = project.tracks.find((t) => t.id === selected),
     clip = project.tracks.flatMap((t) => t.clips).find((c) => c.id === clipId),
@@ -774,6 +850,7 @@ export default function Studio({
             │◀
           </button>
           <button
+            ref={playButton}
             className="play"
             aria-label={playing ? "Pause" : "Play"}
             disabled={busy || recording || !projectEnd(project)}
@@ -786,7 +863,17 @@ export default function Studio({
                 } else {
                   const from =
                     position >= projectEnd(project) + 1.5 ? 0 : position;
-                  await engine.current!.play(project, from);
+                  if (loopEnabled)
+                    await engine.current!.loop(
+                      project,
+                      loopStart,
+                      loopEnd,
+                      metronome,
+                    );
+                  else
+                    await engine.current!.play(project, from, undefined, {
+                      metronome,
+                    });
                   transportFlag.current = true;
                   setPlaying(true);
                 }
@@ -814,10 +901,106 @@ export default function Studio({
         <div className="transport-note">
           <span className={recording ? "red-dot" : "green-dot"} />
           {recording
-            ? "Recording microphone"
+            ? countdown > 0
+              ? `Count in: ${countdown}`
+              : "Recording microphone"
             : "Your next great track starts here"}
         </div>
         <span className="free-badge">FREE TO CREATE</span>
+      </section>
+      <section className="recording-workflow" aria-label="Recording workflow">
+        <label>
+          Record into
+          <select
+            aria-label="Recording target"
+            disabled={locked}
+            value={project.tracks.some((t) => t.id === armed) ? armed : ""}
+            onChange={(e) => setArmed(e.target.value)}
+          >
+            <option value="">New vocal track</option>
+            {project.tracks
+              .filter((t) => t.role !== "beat")
+              .map((t) => (
+                <option value={t.id} key={t.id}>
+                  {t.name}
+                </option>
+              ))}
+          </select>
+        </label>
+        <label>
+          Count-in
+          <select
+            aria-label="Count-in bars"
+            disabled={locked}
+            value={countIn}
+            onChange={(e) => setCountIn(Number(e.target.value))}
+          >
+            <option value={0}>Off</option>
+            <option value={1}>1 bar</option>
+            <option value={2}>2 bars</option>
+          </select>
+        </label>
+        <button
+          disabled={locked}
+          aria-pressed={metronome}
+          onClick={() => setMetronome(!metronome)}
+        >
+          Metronome
+        </button>
+        <button
+          disabled={locked}
+          aria-pressed={loopEnabled}
+          onClick={() => setLoopEnabled(!loopEnabled)}
+        >
+          Loop playback
+        </button>
+        <button
+          disabled={locked || !projectEnd(project)}
+          onClick={() => {
+            setLoopEnabled(true);
+            setLoopStart(0);
+            setLoopEnd(Math.min(1800, Math.max(0.25, projectEnd(project))));
+          }}
+        >
+          Loop song
+        </button>
+        {loopEnabled && (
+          <>
+            <label>
+              Loop start (s)
+              <input
+                aria-label="Loop start"
+                type="number"
+                min={0}
+                max={1799}
+                step={0.25}
+                disabled={locked}
+                value={loopStart}
+                onChange={(e) => setLoopStart(Number(e.target.value))}
+              />
+            </label>
+            <label>
+              Loop end (s)
+              <input
+                aria-label="Loop end"
+                type="number"
+                min={0.25}
+                max={1800}
+                step={0.25}
+                disabled={locked}
+                value={loopEnd}
+                onChange={(e) => setLoopEnd(Number(e.target.value))}
+              />
+            </label>
+          </>
+        )}
+        <button disabled={locked} onClick={() => setRulerBars(!rulerBars)}>
+          {rulerBars ? "Bars ruler" : "Seconds ruler"}
+        </button>
+        <small>
+          Space: play/pause · R: record/stop. Count-in clicks stay out of the
+          recording. Loop auditions playback only; recording stays linear.
+        </small>
       </section>
       <section className="recording-tools" aria-label="Recording setup">
         <MicrophoneInput
@@ -996,11 +1179,23 @@ export default function Studio({
                   setPosition(Math.max(0, (e.clientX - rect.left) / PX));
                 }}
               >
-                {Array.from({ length: Math.ceil(width / (PX * 5)) }, (_, i) => (
-                  <span key={i} style={{ left: i * PX * 5 }}>
-                    {clock(i * 5).slice(0, 5)}
-                  </span>
-                ))}
+                {Array.from(
+                  {
+                    length: Math.ceil(
+                      width / (PX * (rulerBars ? 240 / project.bpm : 5)),
+                    ),
+                  },
+                  (_, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        left: i * PX * (rulerBars ? 240 / project.bpm : 5),
+                      }}
+                    >
+                      {rulerBars ? String(i + 1) : clock(i * 5).slice(0, 5)}
+                    </span>
+                  ),
+                )}
               </div>
               <div className="playhead" style={{ left: position * PX }}>
                 <i />
@@ -1039,7 +1234,7 @@ export default function Studio({
                       key={c.id}
                       disabled={locked}
                       aria-label={`Select clip on ${t.name}`}
-                      className={`clip ${clipId === c.id ? "chosen" : ""}`}
+                      className={`clip ${clipId === c.id ? "chosen" : ""} ${c.muted ? "muted-clip" : ""}`}
                       style={{
                         left: c.start * PX,
                         width: Math.max(4, c.duration * PX),
@@ -1050,7 +1245,10 @@ export default function Studio({
                         selectClip(c.id);
                       }}
                     >
-                      <span>{t.name}</span>
+                      <span>
+                        {t.name}
+                        {c.muted ? " · Muted" : ""}
+                      </span>
                       <Waveform
                         buffer={engine.current?.buffers.get(c.assetId)}
                         offset={c.offset}
@@ -1145,6 +1343,14 @@ export default function Studio({
                   }}
                 >
                   Normalize clip
+                </button>
+                <button
+                  disabled={locked}
+                  onClick={() =>
+                    patchClip(clip.id, (c) => ({ ...c, muted: !c.muted }))
+                  }
+                >
+                  {clip.muted ? "Unmute clip" : "Mute clip"}
                 </button>
                 <button
                   disabled={locked || clip.level === undefined}
@@ -1294,6 +1500,41 @@ export default function Studio({
                   <option value="adlib">Adlib</option>
                 </select>
               </label>
+              {track.clips.some((c) => c.takeId) && (
+                <section className="take-picker" aria-label="Vocal takes">
+                  <h3>Vocal takes</h3>
+                  {[
+                    ...new Map(
+                      track.clips
+                        .filter((c) => c.takeId)
+                        .map((c) => [c.takeId, c]),
+                    ).values(),
+                  ].map((c, i) => (
+                    <button
+                      key={c.takeId}
+                      disabled={locked}
+                      aria-pressed={!c.muted}
+                      onClick={() =>
+                        edit((p) => ({
+                          ...p,
+                          tracks: p.tracks.map((t) =>
+                            t.id === track.id
+                              ? activateTake(t, c.takeGroup!, c.takeId!)
+                              : t,
+                          ),
+                        }))
+                      }
+                    >
+                      Take {i + 1}
+                      {c.muted ? "" : " · Active"}
+                    </button>
+                  ))}
+                  <small>
+                    New takes at the same start position keep earlier takes
+                    muted, not deleted.
+                  </small>
+                </section>
+              )}
               {track.role === "beat" ? (
                 <BeatRack
                   track={track}
@@ -1307,6 +1548,11 @@ export default function Studio({
                   update={(patch) => patchTrack(track.id, patch)}
                 />
               )}
+              <StockRack
+                track={track}
+                disabled={locked}
+                update={(patch) => patchTrack(track.id, patch)}
+              />
               {(
                 [
                   [

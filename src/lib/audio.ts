@@ -1,3 +1,5 @@
+import { stockPlugins, processStock } from "./stock-plugins";
+import { TransportClicks } from "./transport-clicks";
 import { samplePeak } from "./meter";
 import { audible, projectEnd, type Project, type Track } from "./model";
 import { encodeWav } from "./wav";
@@ -17,6 +19,7 @@ function impulse(ctx: Context) {
 }
 type Channel = {
   input: GainNode;
+  mid: BiquadFilterNode;
   low: BiquadFilterNode;
   high: BiquadFilterNode;
   highpass: BiquadFilterNode;
@@ -65,6 +68,9 @@ function updateChannel(
       if (live) param.setTargetAtTime(value, ctx.currentTime, 0.015);
       else param.value = value;
     };
+  const plugins = stockPlugins(t.plugins);
+  set(c.mid.gain, plugins.bypass ? 0 : plugins.midGain);
+  set(c.mid.frequency, plugins.midFreq);
   set(c.gain.gain, enabled ? t.gain : 0);
   set(c.pan.pan, t.pan);
   set(c.wetPan.pan, t.pan);
@@ -108,6 +114,7 @@ function channel(
   destination: AudioNode = ctx.destination,
 ): Channel {
   const input = ctx.createGain(),
+    mid = ctx.createBiquadFilter(),
     low = ctx.createBiquadFilter(),
     high = ctx.createBiquadFilter(),
     highpass = ctx.createBiquadFilter(),
@@ -129,6 +136,8 @@ function channel(
     rightPan = ctx.createStereoPanner(),
     leftFeedback = ctx.createGain(),
     rightFeedback = ctx.createGain();
+  mid.type = "peaking";
+  mid.Q.value = 1;
   low.type = "lowshelf";
   // A zero-gain compressor branch must not upmix mono vocals before the panner.
   compressor.channelCount = inputChannels;
@@ -143,7 +152,12 @@ function channel(
   lowpass.type = "lowpass";
   lowpass.Q.value = 0.707;
   verb.buffer = room;
-  input.connect(highpass).connect(lowpass).connect(low).connect(high);
+  input
+    .connect(mid)
+    .connect(highpass)
+    .connect(lowpass)
+    .connect(low)
+    .connect(high);
   high.connect(dryCompression).connect(shape);
   high.connect(compressor).connect(compressed).connect(shape);
   shape.connect(driveGain);
@@ -159,6 +173,7 @@ function channel(
   gain.connect(destination);
   const nodes = [
     input,
+    mid,
     low,
     high,
     highpass,
@@ -183,6 +198,7 @@ function channel(
   ];
   const c = {
     input,
+    mid,
     low,
     high,
     highpass,
@@ -218,6 +234,10 @@ export class AudioEngine {
   private master?: GainNode;
   private meterSplit?: ChannelSplitterNode;
   private meterSamples?: Float32Array<ArrayBuffer>;
+  private prepared = new Map<string, AudioBuffer>();
+  private pluginCache = new Map<string, AudioBuffer>();
+  private clicks?: TransportClicks;
+  private loopRange?: { from: number; to: number };
   private started = 0;
   private position = 0;
   async ready() {
@@ -233,6 +253,8 @@ export class AudioEngine {
     return b;
   }
   stop() {
+    this.clicks?.stop();
+    this.loopRange = undefined;
     this.sources.forEach((s) => {
       try {
         s.stop();
@@ -260,18 +282,108 @@ export class AudioEngine {
     }
     return peak;
   }
-  time() {
-    return (
-      this.position +
-      Math.max(0, (this.context?.currentTime ?? 0) - this.started)
-    );
+  get looping() {
+    return !!this.loopRange;
   }
-  async play(p: Project, from: number, onEnded?: () => void) {
+  secondsUntilStart() {
+    return Math.max(0, this.started - (this.context?.currentTime ?? 0));
+  }
+  time() {
+    const elapsed = Math.max(
+      0,
+      (this.context?.currentTime ?? 0) - this.started,
+    );
+    return this.loopRange
+      ? this.loopRange.from +
+          (elapsed % (this.loopRange.to - this.loopRange.from))
+      : this.position + elapsed;
+  }
+  private async preparePlugins(p: Project, ctx: BaseAudioContext) {
+    const next = new Map<string, AudioBuffer>();
+    let total = 0;
+    for (const t of p.tracks) {
+      const fx = stockPlugins(t.plugins);
+      if (
+        fx.bypass ||
+        ((!fx.pitch.enabled || fx.pitch.strength === 0) &&
+          fx.gateDb === 0 &&
+          fx.deEss === 0)
+      )
+        continue;
+      for (const clip of t.clips) {
+        if (clip.muted) continue;
+        total += clip.duration;
+        if (clip.duration > 240 || total > 600)
+          throw new Error(
+            "Stock pitch/cleanup processing supports clips up to four minutes and ten minutes of active audio per session. Trim clips or bypass processing.",
+          );
+        const key = JSON.stringify([
+          clip.assetId,
+          clip.offset,
+          clip.duration,
+          fx.gateDb,
+          fx.deEss,
+          fx.pitch,
+        ]);
+        let buffer = this.pluginCache.get(key);
+        if (!buffer) {
+          const raw = this.buffers.get(clip.assetId);
+          if (!raw) throw new Error("Source audio is missing");
+          const start = Math.round(clip.offset * raw.sampleRate),
+            end = Math.min(
+              raw.length,
+              Math.round((clip.offset + clip.duration) * raw.sampleRate),
+            ),
+            data = Array.from({ length: raw.numberOfChannels }, (_, i) =>
+              raw.getChannelData(i).slice(start, end),
+            );
+          const output = await processStock(data, raw.sampleRate, fx);
+          buffer = ctx.createBuffer(
+            raw.numberOfChannels,
+            Math.max(1, end - start),
+            raw.sampleRate,
+          );
+          output.forEach((values, i) => buffer!.copyToChannel(values, i));
+          this.pluginCache.set(key, buffer);
+          let size = 0;
+          for (const b of this.pluginCache.values())
+            size += b.length * b.numberOfChannels;
+          while (size > 8000000 || this.pluginCache.size > 8) {
+            const first = this.pluginCache.keys().next().value!;
+            const b = this.pluginCache.get(first)!;
+            size -= b.length * b.numberOfChannels;
+            this.pluginCache.delete(first);
+          }
+        }
+        next.set(clip.id, buffer);
+      }
+    }
+    this.prepared = next;
+  }
+  async play(
+    p: Project,
+    from: number,
+    onEnded?: () => void,
+    options: { countInBeats?: number; metronome?: boolean } = {},
+  ) {
     const ctx = await this.ready();
     this.stop();
     this.position = from;
     try {
-      this.started = this.schedule(ctx, p, from, true);
+      await this.preparePlugins(p, ctx);
+      const pre = options.countInBeats ?? 0;
+      this.started = this.schedule(
+        ctx,
+        p,
+        from,
+        true,
+        Infinity,
+        (pre * 60) / p.bpm,
+      );
+      if (pre || options.metronome) {
+        this.clicks ??= new TransportClicks(ctx);
+        this.clicks.start(this.started, p.bpm, from, pre, !!options.metronome);
+      }
       if (onEnded) {
         const end = ctx.createBufferSource();
         end.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
@@ -292,6 +404,53 @@ export class AudioEngine {
       throw e;
     }
   }
+  async loop(p: Project, from: number, to: number, metronome = false) {
+    if (
+      !Number.isFinite(from) ||
+      !Number.isFinite(to) ||
+      from < 0 ||
+      to - from < 0.25 ||
+      to > 1800
+    )
+      throw new Error("Choose a loop between 0.25 seconds and 30 minutes.");
+    const ctx = await this.ready();
+    this.stop();
+    await this.preparePlugins(p, ctx);
+    const offline = new OfflineAudioContext(
+      2,
+      Math.ceil((to - from) * 44100),
+      44100,
+    );
+    this.schedule(offline, p, from, false, to);
+    const rendered = await offline.startRendering();
+    const source = ctx.createBufferSource();
+    source.buffer = rendered;
+    source.loop = true;
+    source.connect(this.liveDestination(ctx));
+    this.sources.push(source);
+    this.started = ctx.currentTime + 0.1;
+    this.position = from;
+    this.loopRange = { from, to };
+    source.start(this.started);
+    if (metronome) {
+      this.clicks ??= new TransportClicks(ctx);
+      this.clicks.start(this.started, p.bpm, from, 0, true);
+    }
+    return this.started;
+  }
+  private liveDestination(ctx: AudioContext) {
+    this.master = ctx.createGain();
+    this.master.connect(ctx.destination);
+    this.meterSplit = ctx.createChannelSplitter(2);
+    this.master.connect(this.meterSplit);
+    this.analysers = [ctx.createAnalyser(), ctx.createAnalyser()];
+    this.analysers.forEach((a, i) => {
+      a.fftSize = 2048;
+      this.meterSplit!.connect(a, i);
+    });
+    this.meterSamples = new Float32Array(2048);
+    return this.master;
+  }
   update(p: Project) {
     for (const t of p.tracks) {
       const c = this.channels.get(t.id);
@@ -300,21 +459,16 @@ export class AudioEngine {
         updateChannel(this.context, c, t, audible(t, p.tracks), true);
     }
   }
-  private schedule(ctx: Context, p: Project, from: number, live: boolean) {
+  private schedule(
+    ctx: Context,
+    p: Project,
+    from: number,
+    live: boolean,
+    until = Infinity,
+    lead = 0,
+  ) {
     let destination: AudioNode = ctx.destination;
-    if (live) {
-      this.master = ctx.createGain();
-      this.master.connect(ctx.destination);
-      this.meterSplit = ctx.createChannelSplitter(2);
-      this.master.connect(this.meterSplit);
-      this.analysers = [ctx.createAnalyser(), ctx.createAnalyser()];
-      this.analysers.forEach((a, i) => {
-        a.fftSize = 2048;
-        this.meterSplit!.connect(a, i);
-      });
-      this.meterSamples = new Float32Array(2048);
-      destination = this.master;
-    }
+    if (live) destination = this.liveDestination(ctx as AudioContext);
     const room = impulse(ctx),
       plan: {
         source: AudioBufferSourceNode;
@@ -342,12 +496,16 @@ export class AudioEngine {
       );
       if (live) this.channels.set(t.id, c);
       for (const clip of t.clips) {
-        const b = this.buffers.get(clip.assetId);
+        if (clip.muted || clip.start >= until) continue;
+        const processed = this.prepared.get(clip.id),
+          b = processed ?? this.buffers.get(clip.assetId),
+          offset = processed ? 0 : clip.offset;
         if (!b) throw new Error("Audio asset missing. Reopen the project.");
         const skip = Math.max(0, from - clip.start),
           duration = Math.min(
             clip.duration - skip,
-            b.duration - clip.offset - skip,
+            b.duration - offset - skip,
+            until - Math.max(from, clip.start),
           );
         if (duration <= 0) continue;
         const s = ctx.createBufferSource();
@@ -359,13 +517,13 @@ export class AudioEngine {
         plan.push({
           source: s,
           delay: Math.max(0, clip.start - from),
-          offset: clip.offset + skip,
+          offset: offset + skip,
           duration,
         });
         if (live) this.sources.push(s);
       }
     }
-    const when = live ? ctx.currentTime + 0.1 : 0;
+    const when = live ? ctx.currentTime + 0.1 + lead : 0;
     for (const step of plan)
       step.source.start(when + step.delay, step.offset, step.duration);
     return when;
@@ -382,6 +540,7 @@ export class AudioEngine {
       Math.ceil((end + effectTail(p.tracks)) * 44100),
       44100,
     );
+    await this.preparePlugins(p, ctx);
     this.schedule(ctx, p, 0, false);
     const b = await ctx.startRendering();
     return new Blob(

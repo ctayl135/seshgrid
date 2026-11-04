@@ -159,3 +159,13 @@ Assets and clips are separate so later phases can add different source types. MI
 Source files/takes are limited to 50 MB, with a 30-minute export guard to protect browser memory. These are technical safeguards, not premium restrictions. Projects currently live in memory while editing; save frequently. Browser data clearing deletes local projects. Source audio is decoded in RAM, and long or numerous tracks may exhaust device memory. Codec support follows the browser. Keep levels below clipping; no limiter/normalizer is included. Desktop Chromium is the initial validation target; mobile/background recording and device interruptions need additional manual testing.
 
 Before calling Phase 1 production-ready, validate real microphone hardware, input latency, interruptions, multi-track playback and exported listening quality; execute the two-account Supabase privacy matrix; test deployment redirects, storage quota/network failures and recovery. See ROADMAP.md for progress and follow-on work.
+
+## Recording workflow and stock plugins
+
+Choose a vocal track in **Record into**, set a one- or two-bar count-in, and enable the metronome if needed. Clicks play through headphones and are excluded from captured input and exported WAVs. Retakes at the same start position retain earlier audio muted; the channel's **Vocal takes** selector switches whole takes, including split segments. Space plays/pauses and R records/stops when focus is outside interactive controls.
+
+The bars ruler follows tempo in 4/4. **Loop song** sets a playback loop; custom start/end values audition a section. Loop playback uses a rendered mix, so stop before changing its mix. Recording remains linear and export always renders the complete song. Transport choices reset on reopening; audio edits, takes and plugin settings are saved.
+
+Each channel has a free stock rack: **NOIR Pitch Lock**, noise gate, de-esser and presence EQ, alongside existing compression, saturation, filters, reverb and stereo delay. Pitch Lock offers chromatic, major and natural-minor scales, key, correction strength and retune smoothing; Hard tune and Smooth minor provide starting points. Set the key to match your song. Bypass/reset leaves original source audio intact.
+
+Pitch Lock is browser-native monophonic correction for approximately 70–1000 Hz. It processes playback and export, not live microphone monitoring, and may introduce artifacts on complex vocals, chords or noisy sources. It does not load desktop VSTs or include Antares Auto-Tune. Pitch/cleanup processing allows four minutes per clip and ten minutes of active processed audio per session, with a bounded approximately 32 MB processing cache. No extra accounts, API keys or paid services are needed.

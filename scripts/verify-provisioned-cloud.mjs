@@ -69,6 +69,19 @@ try {
   track.role = "beat";
   track.clips[0].level = 1.25;
   track.pan = -0.25;
+  const { stockPlugins } = await import("../src/lib/stock-plugins.ts");
+  track.plugins = stockPlugins();
+  track.plugins.pitch = {
+    enabled: true,
+    root: 9,
+    scale: "minor",
+    strength: 0.85,
+    retune: 90,
+  };
+  track.plugins.deEss = 0.4;
+  track.clips[0].takeGroup = randomUUID();
+  track.clips[0].takeId = randomUUID();
+  track.clips[0].muted = false;
   track.reverb = 0.1;
   project.tracks = [track];
   Object.assign(track, applyVocalPreset(track, "ping-pong"));
@@ -84,7 +97,18 @@ try {
     "Cloud project is listed",
   );
   stage = "owner-reopen";
-  const legacy=await studio.from("projects").update({name:project.name}).eq("id",project.id).select("revision");assert.equal(legacy.error,null,"Legacy private owner saves remain supported");assert.equal(legacy.data.length,1);session.cloudRevision=legacy.data[0].revision;
+  const legacy = await studio
+    .from("projects")
+    .update({ name: project.name })
+    .eq("id", project.id)
+    .select("revision");
+  assert.equal(
+    legacy.error,
+    null,
+    "Legacy private owner saves remain supported",
+  );
+  assert.equal(legacy.data.length, 1);
+  session.cloudRevision = legacy.data[0].revision;
   const restored = await storage.loadCloud(project.id, accounts[0].id);
   assert.deepEqual(restored.project, project);
   assert.deepEqual(
@@ -366,7 +390,15 @@ try {
   assert.equal(beatCopy.project.tracks[0].role, "beat");
   assert.equal(beatCopy.project.bpm, 140);
   assert.notEqual(beatCopy.project.id, projectId);
-  const takeOwner=await studio.from("projects").update({owner_id:accounts[1].id}).eq("id",projectId).select("id");assert.ok(takeOwner.error||takeOwner.data.length===0,"Editors cannot take ownership");
+  const takeOwner = await studio
+    .from("projects")
+    .update({ owner_id: accounts[1].id })
+    .eq("id", projectId)
+    .select("id");
+  assert.ok(
+    takeOwner.error || takeOwner.data.length === 0,
+    "Editors cannot take ownership",
+  );
 
   await studio.auth.signOut();
   await studio.auth.signInWithPassword({

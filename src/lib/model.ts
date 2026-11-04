@@ -1,3 +1,4 @@
+import type { StockPlugins } from "./stock-plugins";
 import type { VocalEffects } from "./presets";
 export type Clip = {
   id: string;
@@ -6,6 +7,9 @@ export type Clip = {
   offset: number;
   duration: number;
   level?: number;
+  muted?: boolean;
+  takeId?: string;
+  takeGroup?: string;
 };
 export type Track = {
   id: string;
@@ -19,6 +23,7 @@ export type Track = {
   high: number;
   reverb: number;
   fx?: VocalEffects;
+  plugins?: StockPlugins;
   clips: Clip[];
 };
 export type Project = {
@@ -58,7 +63,9 @@ export function newTrack(name: string): Track {
 export function projectEnd(p: Project) {
   return Math.max(
     0,
-    ...p.tracks.flatMap((t) => t.clips.map((c) => c.start + c.duration)),
+    ...p.tracks.flatMap((t) =>
+      t.clips.filter((c) => !c.muted).map((c) => c.start + c.duration),
+    ),
   );
 }
 export function audible(t: Track, tracks: Track[]) {
@@ -114,6 +121,25 @@ export function validateProject(value: unknown): Project {
     )
       throw new Error("Invalid track");
     ids.add(t.id);
+    if (t.plugins !== undefined) {
+      const v = t.plugins;
+      if (
+        !v ||
+        typeof v.bypass !== "boolean" ||
+        !(v.gateDb === 0 || finite(v.gateDb, -80, -10)) ||
+        !finite(v.deEss, 0, 1) ||
+        !finite(v.midGain, -12, 12) ||
+        !finite(v.midFreq, 200, 8000) ||
+        !v.pitch ||
+        typeof v.pitch.enabled !== "boolean" ||
+        !Number.isInteger(v.pitch.root) ||
+        !finite(v.pitch.root, 0, 11) ||
+        !["major", "minor", "chromatic"].includes(v.pitch.scale) ||
+        !finite(v.pitch.strength, 0, 1) ||
+        !finite(v.pitch.retune, 0, 300)
+      )
+        throw new Error("Invalid stock plugin settings");
+    }
     if (t.fx !== undefined) {
       const fx = t.fx;
       if (
@@ -139,11 +165,43 @@ export function validateProject(value: unknown): Project {
         !finite(c.start, 0, 14400) ||
         !finite(c.offset, 0, 14400) ||
         !finite(c.duration, 0.001, 14400) ||
-        (c.level !== undefined && !finite(c.level, 0, 32))
+        (c.level !== undefined && !finite(c.level, 0, 32)) ||
+        (c.muted !== undefined && typeof c.muted !== "boolean") ||
+        ((c.takeGroup !== undefined || c.takeId !== undefined) &&
+          (!/^[a-f0-9-]{36}$/.test(c.takeGroup ?? "") ||
+            !/^[a-f0-9-]{36}$/.test(c.takeId ?? "")))
       )
         throw new Error("Invalid clip");
       ids.add(c.id);
     }
   }
   return p;
+}
+
+export function addRecordingTake(track: Track, clip: Clip): Track {
+  const group =
+    track.clips.find(
+      (c) => c.takeGroup && Math.abs(c.start - clip.start) < 0.05,
+    )?.takeGroup ?? crypto.randomUUID();
+  return {
+    ...track,
+    clips: [
+      ...track.clips.map((c) =>
+        c.takeGroup === group ? { ...c, muted: true } : c,
+      ),
+      { ...clip, takeGroup: group, takeId: crypto.randomUUID(), muted: false },
+    ],
+  };
+}
+export function activateTake(
+  track: Track,
+  group: string,
+  takeId: string,
+): Track {
+  return {
+    ...track,
+    clips: track.clips.map((c) =>
+      c.takeGroup === group ? { ...c, muted: c.takeId !== takeId } : c,
+    ),
+  };
 }

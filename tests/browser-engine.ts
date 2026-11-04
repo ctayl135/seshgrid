@@ -1,3 +1,4 @@
+import { stockPlugins, detectPitch } from "../src/lib/stock-plugins";
 import { normalizationLevel } from "../src/lib/normalize";
 import { PlaylistPlayer } from "../src/lib/playlist";
 // Runs only in the isolated local test server; never included in the studio build.
@@ -50,9 +51,12 @@ button.onclick = async () => {
     const project = newProject(),
       track = newTrack("Synthetic take");
     project.tracks = [track];
-    const when = await engine.play(project, 0);
+    const when = await engine.play(project, 0, undefined, {
+      countInBeats: 1,
+      metronome: true,
+    });
     capture.start(when);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1600));
     check(
       capture.peak() > 0.09 && capture.peak() < 0.11,
       "Input meter does not measure raw microphone signal",
@@ -205,6 +209,11 @@ button.onclick = async () => {
         duration: 0.1,
       },
     ];
+    bypass.clips.push({
+      ...bypass.clips[0],
+      id: crypto.randomUUID(),
+      muted: true,
+    });
     project.tracks = [bypass];
     const unchanged = await context.decodeAudioData(
         await (await engine.export(project)).arrayBuffer(),
@@ -289,7 +298,57 @@ button.onclick = async () => {
       played.join(",") === "first,second",
       "Actual audio completion did not sequence two songs",
     );
-    status.textContent = `PASS — actual AudioWorklet capture → PCM WAV → decode → offline mix/export. Take: ${recorded.duration.toFixed(3)}s; RMS: ${rms.toFixed(4)}. All eight vocal/adlib presets changed rendered audio with finite samples. Ping-pong echoes alternate left/right at the expected times. Legacy mono/stereo levels are preserved with effects bypassed. Input selection, input metering, stereo mix metering and stopped-node cleanup passed. Two songs automatically advanced using actual audio completion events. Non-destructive clip normalization reached the expected rendered peak. No microphone used.`;
+    const detunedId = crypto.randomUUID(),
+      detuned = context.createBuffer(1, context.sampleRate, context.sampleRate);
+    for (let i = 0; i < detuned.length; i++)
+      detuned.getChannelData(0)[i] =
+        0.2 * Math.sin((2 * Math.PI * 455 * i) / context.sampleRate);
+    engine.buffers.set(detunedId, detuned);
+    const tuned = newTrack("Pitch Lock integration");
+    tuned.pan = 1;
+    tuned.gain = 0.5;
+    tuned.plugins = stockPlugins();
+    tuned.plugins.pitch = {
+      enabled: true,
+      root: 0,
+      scale: "major",
+      strength: 1,
+      retune: 0,
+    };
+    tuned.clips = [
+      {
+        id: crypto.randomUUID(),
+        assetId: detunedId,
+        start: 0,
+        offset: 0,
+        duration: 1,
+      },
+    ];
+    project.tracks = [tuned];
+    const corrected = await context.decodeAudioData(
+        await (await engine.export(project)).arrayBuffer(),
+      ),
+      hz = detectPitch(
+        corrected.getChannelData(1),
+        corrected.sampleRate,
+        Math.floor(corrected.sampleRate * 0.5),
+      );
+    check(
+      Math.abs(hz - 440) < 4,
+      "Pitch Lock was not applied to WAV export: " + hz,
+    );
+    await engine.loop(project, 0, 0.25, true);
+    await new Promise((r) => setTimeout(r, 450));
+    check(
+      engine.looping && engine.time() >= 0 && engine.time() < 0.25,
+      "Loop preview did not wrap within its region",
+    );
+    engine.stop();
+    check(
+      !engine.looping && engine.peak() === 0,
+      "Loop stop did not release transport and meters",
+    );
+    status.textContent = `PASS — actual AudioWorklet capture → PCM WAV → decode → offline mix/export. Take: ${recorded.duration.toFixed(3)}s; RMS: ${rms.toFixed(4)}. All eight vocal/adlib presets changed rendered audio with finite samples. Ping-pong echoes alternate left/right at the expected times. Legacy mono/stereo levels are preserved with effects bypassed. Input selection, input metering, stereo mix metering and stopped-node cleanup passed. Two songs automatically advanced using actual audio completion events. Non-destructive clip normalization reached the expected rendered peak. Count-in capture, muted takes, Pitch Lock export and continuous loop wrap/stop passed. No microphone used.`;
     status.dataset.passed = "true";
   } catch (error) {
     status.textContent = `FAIL — ${error instanceof Error ? error.message : String(error)}`;

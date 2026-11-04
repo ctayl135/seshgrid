@@ -165,8 +165,8 @@ export default function VocalRack({
         ))}
       </details>
       <p className="rack-note">
-        Applies to the selected track. Original audio stays intact. Pitch stays
-        as recorded.
+        Applies to the selected track. Original audio stays intact. Use NOIR
+        Pitch Lock below for optional pitch correction.
       </p>
     </section>
   );

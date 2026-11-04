@@ -46,3 +46,12 @@ Add cloud autosave, export peak management, storage garbage collection and proje
 ## Future phases (out of Phase 1 scope)
 
 Virtual instruments and MIDI; revisioned collaboration; separate licensed beat marketplace. Preserve free core studio access. No payment code is part of Phase 1.
+
+## Recording and stock effects — November 4, 2026
+
+- [x] Armed recording targets, 0/1/2-bar count-in, optional metronome, bars ruler and keyboard transport.
+- [x] Non-destructive retakes with active take selection and clip muting.
+- [x] Rendered section loop playback with locked mix edits during looping.
+- [x] Monophonic Pitch Lock, gate, de-esser and presence EQ, with playback/export parity.
+- [x] Portable, local and cloud persistence for plugin settings and take identities.
+- [ ] Live microphone pitch monitoring, automatic repeated loop recording and graphical pitch editing remain future work.
