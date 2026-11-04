@@ -187,3 +187,7 @@ Highlight / Select now supports direct clip dragging with a visual group preview
 ## Volume Motion — November 4, 2026
 
 All 46 tests, TypeScript, production build and credential scan pass. Tests cover interpolation, seeking into a curve, unity outside the region, scheduling a future region without an early ramp, validation and portable persistence. Actual browser audio-engine integration confirms the exported late fade window has over three times the RMS of the early window. Existing capture, effects, metering, playlist and loop regression checks pass. UI checks confirm a two-second fade/visible motion strip, four-point ducking curve and local save/reopen retaining point times and values. Cloud round-trip fixture includes Volume Motion metadata and byte-exact source restoration. Production dpl_GkNVPGKmy1RGubbnCqSt7wg1SSu5 is Ready.
+
+## Monochrome branding — November 4, 2026
+
+Replaced interface color accents, tracks, waveform strokes and motion curves with grayscale values; established black backgrounds and white primary/selected controls. Added an original vector N/music-note mark for navigation and favicon. Production build/TypeScript and client credential scan pass. Hosted home screenshot confirms readable black/white controls, waveform artwork and logo. No recording, account or storage behavior changed. Production dpl_Hyo6JAnDaFR1yH9qugxHcxuQAq26 is Ready.

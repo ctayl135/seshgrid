@@ -20,7 +20,7 @@ export default function Waveform({
       canvas.height = h * devicePixelRatio;
       const ctx = canvas.getContext("2d")!;
       ctx.scale(devicePixelRatio, devicePixelRatio);
-      ctx.strokeStyle = "rgba(255,255,255,.75)";
+      ctx.strokeStyle = "rgba(255, 255, 255,.75)";
       ctx.lineWidth = 1;
       const data = buffer.getChannelData(0),
         start = Math.floor(offset * buffer.sampleRate),

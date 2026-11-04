@@ -231,3 +231,7 @@ Selected clips can now be dragged directly with Highlight / Select active; Move 
 Volume Motion is NOIR's first automation clip: automatically change track volume for fades, swells and ducking. Select a track and use its Volume Motion panel, or highlight time and choose Create Volume Motion in the mini menu. Fade in, Fade out and Duck and return provide starting curves. Click the curve to add points, adjust point time/volume numerically, or remove interior points. Start/length move and resize the region; the timeline shows a purple Volume Motion strip. One motion region per track is supported, up to 64 linear points. Outside the region the multiplier returns to 100%; track gain, mute and solo remain independent. The region controls the entire channel including its effects.
 
 Motion edits are disabled during playback/recording. Curves are saved in local, cloud and portable projects and used by normal playback, loop rendering and every export format. Automation currently controls volume (0–100%) only; pan, filter and effect automation remain future work. Motion regions do not extend the song past its audio clips.
+
+## Monochrome NOIR identity
+
+The interface now uses black, white and grayscale for backgrounds, controls, track colors, meters, selection states, avatar placeholders and Volume Motion curves. Focus/selected controls retain bright outlines. The custom /noir-mark.svg combines an N monogram with a music note, appears beside NOIR in navigation and is used as the site icon. Uploaded artist photos retain their original colors.

@@ -105,8 +105,8 @@ export default function VolumeMotion({
             aria-label="Volume Motion curve"
             style={{
               width: "100%",
-              background: "#11190e",
-              border: "1px solid #50603b",
+              background: "#171717",
+              border: "1px solid #5a5a5a",
             }}
             onClick={(e) => {
               if (disabled || m.points.length >= 64) return;
@@ -135,7 +135,7 @@ export default function VolumeMotion({
           >
             <polyline
               fill="none"
-              stroke="#c4fa70"
+              stroke="#e5e5e5"
               strokeWidth="2"
               points={m.points
                 .map(
@@ -150,7 +150,7 @@ export default function VolumeMotion({
                 cx={(p.time / m.duration) * 240}
                 cy={(1 - p.value) * 100}
                 r={3}
-                fill="#c4fa70"
+                fill="#e5e5e5"
               />
             ))}
           </svg>
