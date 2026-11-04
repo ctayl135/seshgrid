@@ -3,6 +3,7 @@ import { TransportClicks } from "./transport-clicks";
 import { samplePeak } from "./meter";
 import { audible, projectEnd, type Project, type Track } from "./model";
 import { encodeWav } from "./wav";
+import { decodeAudio } from "./codecs";
 import { trackEffects, effectTail } from "./presets";
 type Context = AudioContext | OfflineAudioContext;
 function impulse(ctx: Context) {
@@ -248,7 +249,7 @@ export class AudioEngine {
   async decode(id: string, blob: Blob) {
     // Decoding must work without playback permission (e.g. opening a saved session).
     const ctx = (this.context ??= new AudioContext());
-    const b = await ctx.decodeAudioData(await blob.arrayBuffer());
+    const b = await decodeAudio(ctx, blob);
     this.buffers.set(id, b);
     return b;
   }

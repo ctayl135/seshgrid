@@ -1,0 +1,10 @@
+NOIR browser audio conversion
+
+This software uses unmodified @ffmpeg/core 0.12.10 (FFmpeg WebAssembly), licensed under GNU GPL version 2 or later. Conversion executes as a separate browser worker; input audio is not uploaded for conversion.
+
+GPL license text: /FFMPEG-GPLv2.txt
+Distributed package and binary: https://registry.npmjs.org/@ffmpeg/core/-/core-0.12.10.tgz
+Upstream source, dependency sources and build scripts: https://github.com/ffmpegwasm/ffmpeg.wasm
+Release source and build recipe: https://github.com/ffmpegwasm/ffmpeg.wasm/tree/v0.12.10
+FFmpeg source: https://github.com/FFmpeg/FFmpeg/tree/n5.1.4
+Build recipe includes the source locations and versions of additional codec libraries, including LAME, Vorbis and FLAC support. All changes to NOIR's worker glue are served as readable JavaScript at /audio-codec-worker.js. The original core and WebAssembly binaries are copied unchanged from the pinned npm package during build.

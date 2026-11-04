@@ -207,3 +207,11 @@ For You and Profile include Find your people: search all artist names or @userna
 ## Follow notifications
 
 New follows create an unread notification for the followed artist, naming the follower and linking to their profile. Duplicate follow requests do not create duplicate notifications. Existing inbox polling/unread badges and Mark all read apply; only the recipient can read their notifications. Historical follows are not backfilled. Migration 011 installs the database trigger so every follow entry point behaves consistently.
+
+## Audio formats
+
+Studio imports accept MP3, M4A/AAC, FLAC, WAV, OGG, Opus, AIFF, WebM and WMA, with browser decoding first and a local FFmpeg fallback for supported unencrypted audio. Codec support still depends on the actual file contents. Beat posting now accepts the same audio uploads and converts them to private PCM WAV storage; existing four-minute/50 MB publishing limits still apply after conversion.
+
+Choose **Export format** beside Export for WAV, MP3 (192 kbps), M4A/AAC (192 kbps), FLAC, OGG Vorbis, AAC or AIFF. The mix and effects render first; conversion runs in an isolated local browser worker, never an external conversion service. FLAC/AIFF losslessness is relative to the current 16-bit PCM mix. Opus export is not exposed after a browser decoder round-trip failure. Source clips and project backups remain unchanged.
+
+First conversion downloads approximately 32 MB of codec assets. Conversion allows up to 256 MB of input and a three-minute time limit; long files and lower-memory devices may need shorter exports. WAV remains the fastest default. Compressed encoders may add a small padding tail. The build copies unmodified pinned @ffmpeg/core assets via prepare-codecs.mjs; generated assets are excluded from Git/upload and regenerated on Vercel. License/source information is served at /audio-codecs-notice.txt and /FFMPEG-GPLv2.txt.

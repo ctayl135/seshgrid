@@ -163,3 +163,9 @@ Migration 010 adds member-only literal display-name/username discovery and sugge
 Migration 011 creates unread recipient notifications after new follow inserts; all follow entry points share this database trigger. The inbox supports safe follower-profile links and labels them View artist. Live three-account tests confirm exactly one notice for duplicate requests, correct follower name/link, unread state, and denial of actor/third-party reads. Existing privacy, follow, discovery, DM, beat, release and collaborative-save checks pass; generated accounts removed. Production build/TypeScript and client credential scan pass. Existing 15-second visible-page notification refresh applies; this does not add push/email notifications or historical backfill.
 
 Follow-notification correction: migration 012 backfills missing inbox entries for pre-trigger follows, preserving their original follow time and avoiding duplicates. Verified no existing follows remain without a recipient notification. This corrects the initial no-backfill limitation.
+
+## Multi-format audio — November 4, 2026
+
+All 40 tests, TypeScript and production build pass. Real Chromium worker tests encode and decode generated stereo audio in WAV, MP3, M4A, FLAC, OGG, AAC and AIFF, verifying nonempty output, finite/non-silent audio, channels and duration (1.000–1.045 seconds for a one-second source). Opus failed a round-trip and is intentionally not offered for export. Studio loading now falls back to local conversion after native decode failure. Beat uploads transcode supported input to WAV before publishing. Vercel upload exclusions pass; no private files included. Production dpl_8Uh5qM6eCa46jjWoE2txM8HDCxmB is Ready.
+
+Hosted studio verification also passed: imported a generated portable session, selected MP3, downloaded the real converted MP3, and uploaded it back as a new playable track. FLAC selector updates the Export button. No user recordings were used for conversion tests.

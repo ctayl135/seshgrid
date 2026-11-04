@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useMember } from "./useMember";
 import CommunityLinks from "./CommunityLinks";
 import { supabase } from "@/lib/storage";
+import { decodeAudio } from "@/lib/codecs";
+import { encodeWav } from "@/lib/wav";
 import {
   beats,
   messages,
@@ -214,35 +216,40 @@ export default function CommunityPage({
                       if (!(await getProfile(user.id)))
                         throw new Error("Create your artist profile first.");
                       if (file.size > 50 * 1024 * 1024)
-                        throw new Error("Use a WAV under 50 MB.");
-                      const h = new TextDecoder().decode(
-                        await file.slice(0, 12).arrayBuffer(),
-                      );
-                      if (!h.startsWith("RIFF") || !h.endsWith("WAVE"))
-                        throw new Error("Upload a valid WAV file.");
+                        throw new Error("Use an audio file under 50 MB.");
                       const ctx = new AudioContext();
                       let duration = 0;
+                      let mix: Blob;
                       try {
-                        duration = (
-                          await ctx.decodeAudioData(await file.arrayBuffer())
-                        ).duration;
+                        const decoded = await decodeAudio(ctx, file);
+                        duration = decoded.duration;
+                        if (duration > 240)
+                          throw new Error("Post beats up to four minutes.");
+                        mix = new Blob(
+                          [
+                            encodeWav(
+                              Array.from(
+                                {
+                                  length: Math.min(decoded.numberOfChannels, 2),
+                                },
+                                (_, i) => decoded.getChannelData(i),
+                              ),
+                              decoded.sampleRate,
+                            ),
+                          ],
+                          { type: "audio/wav" },
+                        );
                       } finally {
                         await ctx.close();
                       }
                       if (duration > 240)
                         throw new Error("Post beats up to four minutes.");
-                      await publishMix(
-                        user.id,
-                        title,
-                        genre,
-                        new Blob([file], { type: "audio/wav" }),
-                        {
-                          bpm,
-                          license_notes: notes,
-                          allow_session_use: allow,
-                          duration,
-                        },
-                      );
+                      await publishMix(user.id, title, genre, mix!, {
+                        bpm,
+                        license_notes: notes,
+                        allow_session_use: allow,
+                        duration,
+                      });
                       setStatus("Beat posted. Artists can find it below.");
                       setTitle("");
                       setRights(false);
@@ -261,11 +268,11 @@ export default function CommunityPage({
                     />
                   </label>
                   <label>
-                    WAV audio
+                    Beat audio (MP3, M4A, FLAC, WAV and more)
                     <input
-                      aria-label="Beat WAV"
+                      aria-label="Beat audio"
                       type="file"
-                      accept=".wav,audio/wav"
+                      accept="audio/*,.wav,.mp3,.m4a,.flac,.ogg,.opus,.aac,.aif,.aiff,.webm,.wma"
                       required
                       onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                     />

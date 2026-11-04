@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { AudioEngine } from "@/lib/audio";
+import { convertAudio, EXPORT_FORMATS, type ExportFormat } from "@/lib/codecs";
 import {
   UNDERGROUND_PRESETS,
   applyUndergroundPreset,
@@ -70,6 +71,7 @@ export default function Studio({
   initialPreset?: string;
 } = {}) {
   const router = useRouter();
+  const [exportFormat, setExportFormat] = useState<ExportFormat>("wav");
   const cloudMeta = useRef<{
     id: string;
     ownerId?: string;
@@ -821,22 +823,44 @@ export default function Studio({
           <button disabled={locked || !project.name.trim()} onClick={save}>
             Save{dirty ? " •" : ""}
           </button>
+          <select
+            aria-label="Export format"
+            disabled={locked}
+            value={exportFormat}
+            onChange={(e) => setExportFormat(e.target.value as ExportFormat)}
+          >
+            {Object.entries(EXPORT_FORMATS).map(([key, label]) => (
+              <option key={key} value={key}>
+                {label}
+              </option>
+            ))}
+          </select>
           <button
             className="primary"
             disabled={locked || !projectEnd(project)}
             onClick={() =>
               run(async () => {
+                setMessage(
+                  "Rendering mix" +
+                    (exportFormat === "wav"
+                      ? "…"
+                      : " and converting locally. First conversion downloads the audio engine…"),
+                );
+                const wav = await engine.current!.export(project);
                 download(
-                  await engine.current!.export(project),
-                  `${project.name || "NOIR"}.wav`,
+                  exportFormat === "wav"
+                    ? wav
+                    : await convertAudio(wav, exportFormat),
+                  `${project.name || "NOIR"}.${exportFormat}`,
                 );
                 setMessage(
-                  "WAV exported at 44.1 kHz, 16-bit stereo. Peaks above 0 dBFS are clipped; lower track levels if distorted.",
+                  exportFormat.toUpperCase() +
+                    " exported. Keep mix levels below clipping; compressed formats use lossy encoding.",
                 );
               })
             }
           >
-            Export WAV ↗
+            Export {exportFormat.toUpperCase()} ↗
           </button>
           <button
             className="avatar"
@@ -1067,7 +1091,7 @@ export default function Studio({
               ref={fileInput}
               type="file"
               multiple
-              accept="audio/*,.wav,.mp3,.m4a,.ogg,.flac"
+              accept="audio/*,.wav,.mp3,.m4a,.ogg,.flac,.aac,.opus,.webm,.aif,.aiff,.wma"
               hidden
               onChange={(e) => upload(e.target.files)}
             />
