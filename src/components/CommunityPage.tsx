@@ -192,7 +192,7 @@ export default function CommunityPage({
             Community features are available to signed-in members during private
             testing.
           </p>
-          <Link href="/studio?account=1">Sign in</Link>
+          <Link href="/account">Sign in</Link>
         </section>
       ) : (
         <>

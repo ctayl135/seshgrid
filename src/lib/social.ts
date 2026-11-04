@@ -14,6 +14,9 @@ export type ArtistProfile = {
   display_name: string;
   bio: string;
   genre: string;
+  username?: string | null;
+  avatar_path?: string | null;
+  website?: string;
 };
 export type Release = {
   id: string;
@@ -42,7 +45,7 @@ export async function getProfile(id: string) {
   if (!supabase) throw new Error("Accounts are not configured");
   const { data, error } = await supabase
     .from("artist_profiles")
-    .select("id,display_name,bio,genre")
+    .select("id,display_name,bio,genre,username,avatar_path,website")
     .eq("id", id)
     .maybeSingle();
   if (error) throw error;
@@ -53,14 +56,62 @@ export async function saveProfile(
   name: string,
   bio: string,
   genre: string,
+  details?: { username: string; website: string; avatar_path?: string | null },
 ) {
   if (!supabase) throw new Error("Accounts are not configured");
+  const extra = details
+    ? accountDetails(details.username, details.website)
+    : {};
   const { error } = await supabase.from("artist_profiles").upsert({
     id,
     ...profileValues(name, bio, genre),
+    ...extra,
+    ...(details ? { avatar_path: details.avatar_path ?? null } : {}),
     updated_at: new Date().toISOString(),
   });
   if (error) throw error;
+}
+export function accountDetails(username: string, website: string) {
+  const handle = username.trim().toLowerCase(),
+    link = website.trim();
+  if (!/^[a-z0-9_]{3,24}$/.test(handle))
+    throw new Error(
+      "Choose a username with 3–24 lowercase letters, numbers or underscores.",
+    );
+  if (link && (link.length > 200 || !/^https:\/\//i.test(link)))
+    throw new Error("Use an https:// website link, up to 200 characters.");
+  if (link) {
+    const u = new URL(link);
+    if (u.username || u.password)
+      throw new Error("Website links cannot contain login details.");
+  }
+  return { username: handle, website: link };
+}
+export async function uploadAvatar(userId: string, file: File) {
+  if (!supabase) throw new Error("Sign in first");
+  if (
+    !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
+    file.size > 2097152 ||
+    !file.size
+  )
+    throw new Error("Choose a JPG, PNG or WebP photo under 2 MB.");
+  const bitmap = await createImageBitmap(file);
+  const valid = bitmap.width <= 4096 && bitmap.height <= 4096;
+  bitmap.close();
+  if (!valid) throw new Error("Choose a photo no larger than 4096 × 4096.");
+  const path =
+    userId +
+    "/" +
+    crypto.randomUUID() +
+    "." +
+    { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp" }[
+      file.type
+    ];
+  const { error } = await supabase.storage
+    .from("artist-avatars")
+    .upload(path, file, { contentType: file.type, cacheControl: "0" });
+  if (error) throw error;
+  return path;
 }
 export async function releases(owner?: string) {
   if (!supabase) throw new Error("Accounts are not configured");

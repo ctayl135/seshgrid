@@ -1,6 +1,7 @@
 "use client";
 import CommunityLinks from "./CommunityLinks";
 import ArtistNetwork from "./ArtistNetwork";
+import ArtistAvatar from "./ArtistAvatar";
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -10,6 +11,7 @@ import {
   GENRES,
   getProfile,
   saveProfile,
+  uploadAvatar,
   releases,
   listenURL,
   setPublished,
@@ -28,6 +30,9 @@ export default function SocialPage({
     [artist, setArtist] = useState<ArtistProfile | null>(null),
     [items, setItems] = useState<Release[]>([]),
     [name, setName] = useState(""),
+    [username, setUsername] = useState(""),
+    [website, setWebsite] = useState(""),
+    [photo, setPhoto] = useState<File | null>(null),
     [bio, setBio] = useState(""),
     [genre, setGenre] = useState("Underground"),
     [filter, setFilter] = useState("All"),
@@ -46,7 +51,9 @@ export default function SocialPage({
     ]);
     if (revision !== request.current) return;
     setArtist(profile);
-    setName(profile?.display_name ?? "");
+    setName(profile?.display_name ?? _u.user_metadata?.display_name ?? "");
+    setUsername(profile?.username ?? "");
+    setWebsite(profile?.website ?? "");
     setBio(profile?.bio ?? "");
     setGenre(profile?.genre ?? "Underground");
     setItems(posts);
@@ -97,7 +104,13 @@ export default function SocialPage({
       try {
         await fn();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Request failed");
+        setError(
+          typeof e === "object" && e && "code" in e && e.code === "23505"
+            ? "That username is taken. Try another one."
+            : e instanceof Error
+              ? e.message
+              : "Could not save. Check your details and try again.",
+        );
       } finally {
         setBusy(false);
       }
@@ -146,6 +159,9 @@ export default function SocialPage({
         </Link>
       )}
       <header className="social-hero">
+        {mode === "profile" && artist && (
+          <ArtistAvatar path={artist.avatar_path} name={artist.display_name} />
+        )}
         <span className="eyebrow">BY NEW AGE MUSIC · FREE TO CREATE</span>
         <h1>
           {mode === "feed"
@@ -157,6 +173,16 @@ export default function SocialPage({
             ? "Underground music from the artists creating here. Fresh uploads, with your genre first."
             : artist?.bio || "Your name. Your sound. Your own lane."}
         </p>
+        {mode === "profile" && artist?.username && <p>@{artist.username}</p>}
+        {mode === "profile" && artist?.website && (
+          <a
+            href={artist.website}
+            target="_blank"
+            rel="noopener noreferrer nofollow"
+          >
+            Artist website ↗
+          </a>
+        )}
       </header>
       {!loaded ? (
         <p>Loading music…</p>
@@ -164,10 +190,10 @@ export default function SocialPage({
         <section className="social-card">
           <h2>Join the session</h2>
           <p>
-            Sign in from the studio to create your profile and listen to member
-            releases. Private testing is still active.
+            Create your free account to make your artist profile, follow
+            creators and share finished songs.
           </p>
-          <Link href="/studio?account=1">Sign in</Link>
+          <Link href="/account">Create account or sign in</Link>
         </section>
       ) : (
         <>
@@ -177,13 +203,77 @@ export default function SocialPage({
               onSubmit={(e) => {
                 e.preventDefault();
                 void run(async () => {
-                  await saveProfile(user.id, name, bio, genre);
+                  let path = artist?.avatar_path ?? null;
+                  if (photo) path = await uploadAvatar(user.id, photo);
+                  try {
+                    await saveProfile(user.id, name, bio, genre, {
+                      username,
+                      website,
+                      avatar_path: path,
+                    });
+                  } catch (e) {
+                    if (photo && path)
+                      await supabase!.storage
+                        .from("artist-avatars")
+                        .remove([path]);
+                    throw e;
+                  }
+                  if (photo && artist?.avatar_path)
+                    await supabase!.storage
+                      .from("artist-avatars")
+                      .remove([artist.avatar_path]);
+                  setPhoto(null);
                   await refresh(user, user.id);
                   setMessage("Artist profile saved.");
                 });
               }}
             >
-              <h2>Edit profile</h2>
+              <h2>
+                {artist
+                  ? "Make it yours"
+                  : "Welcome to NOIR — make yourself at home"}
+              </h2>
+              <p>
+                Choose your name and photo, then start a session or meet other
+                artists. You can edit these anytime.
+              </p>
+              <label>
+                Username
+                <input
+                  aria-label="Username"
+                  required
+                  minLength={3}
+                  maxLength={24}
+                  pattern="[a-z0-9_]{3,24}"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value.toLowerCase())}
+                />
+              </label>
+              <p>
+                3–24 letters, numbers or underscores. Your artist name can be
+                different.
+              </p>
+              <label>
+                Profile photo
+                <input
+                  aria-label="Profile photo"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
+                />
+              </label>
+              <p>JPG, PNG or WebP, up to 2 MB. {photo?.name}</p>
+              <label>
+                Website (optional)
+                <input
+                  aria-label="Artist website"
+                  type="url"
+                  placeholder="https://"
+                  maxLength={200}
+                  value={website}
+                  onChange={(e) => setWebsite(e.target.value)}
+                />
+              </label>
               <label>
                 Artist name
                 <input
@@ -218,6 +308,8 @@ export default function SocialPage({
               <button className="primary" disabled={busy}>
                 Save profile
               </button>
+              <Link href="/studio">Start a session ↗</Link>{" "}
+              <Link href="/presets">Find your sound ↗</Link>
             </form>
           )}
           <ArtistNetwork viewer={user.id} artist={target} />

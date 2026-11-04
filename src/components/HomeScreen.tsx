@@ -116,7 +116,7 @@ export default function HomeScreen({
           <CommunityLinks />
           <Link href="/profile">Profile</Link>
         </div>
-        <Link className="home-account" href="/studio?account=1">
+        <Link className="home-account" href="/account">
           {signedIn ? "Account" : "Sign in"}
         </Link>
       </nav>

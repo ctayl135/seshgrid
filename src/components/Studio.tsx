@@ -1716,6 +1716,13 @@ export default function Studio({
               <>
                 <span className="eyebrow">YOUR SPACE TO CREATE</span>
                 <h2>{user ? "Your account" : "Welcome to NOIR"}</h2>
+                {!user && (
+                  <p>
+                    <Link href="/account" target="_blank" rel="noreferrer">
+                      New here? Create your free NOIR account ↗
+                    </Link>
+                  </p>
+                )}
                 {!supabase ? (
                   <p>
                     Cloud accounts need Supabase configuration. Local recording,
@@ -1787,7 +1794,7 @@ export default function Studio({
                       disabled={busy || !email || password.length < 8}
                       onClick={() =>
                         run(async () => {
-                          const { error } = await supabase!.auth.signUp({
+                          const { data, error } = await supabase!.auth.signUp({
                             email,
                             password,
                             options: {
@@ -1796,7 +1803,9 @@ export default function Studio({
                           });
                           if (error) throw error;
                           setMessage(
-                            "Account requested. Check your email to confirm before signing in.",
+                            data.session
+                              ? "Welcome to NOIR! Open Profile to choose your username and photo."
+                              : "Check your email to confirm your account. If you already signed up, try signing in.",
                           );
                           setModal(null);
                         })

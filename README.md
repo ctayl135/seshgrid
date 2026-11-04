@@ -193,3 +193,9 @@ Direct Auxd publishing is pending identification of the intended Auxd service an
 Open /presets for 16 searchable vocal/adlib chains: ten artist-inspired starting points (Lazer Dim 700, Glokk40Spaz, Boofpaxkmooky, OsamaSon and Summrs) plus six NOIR originals. These are original effect configurations, not official artist settings or endorsements. Start session creates and arms a new vocal/adlib track; existing tracks use Stock Plugins → Underground preset library. Settings preserve volume, pan, source edits and chosen pitch key/scale.
 
 Two user-requested sample accounts, NOIR Demo Artist and NOIR Demo Producer, remain available for testing. Credentials are only in ignored local test-results/NOIR-demo-accounts.txt; never commit or deploy them. Their example.invalid email addresses cannot receive email. The existing ui-social-fixture cleanup commands remove these demo users when no longer needed. Separate automated privacy-test accounts are always removed after tests.
+
+## Public account creation and profile setup — November 4, 2026
+
+Public instant email/password signup is now enabled at /account, with email confirmation off at the owner's explicit request. Email addresses are unverified during early access; account sessions and all private project policies remain enforced. Home/community links now lead to the account page. The studio also links to the new flow and distinguishes instant sessions from confirmation-required responses.
+
+Migration 009 adds unique editable usernames, private avatar storage and optional HTTPS website links. Profiles include name, username, bio, genre, picture and next-step links. Photos accept JPG/PNG/WebP under 2 MB, up to 4096 pixels per dimension, decoded before upload. Database/storage policies restrict profile edits and avatar writes to the account owner; members can view profile pictures through signed links. Set Confirm email back on and configure SMTP when moving to verified email onboarding.
