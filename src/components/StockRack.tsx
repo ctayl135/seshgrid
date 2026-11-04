@@ -1,5 +1,9 @@
 "use client";
 import type { Track } from "@/lib/model";
+import {
+  UNDERGROUND_PRESETS,
+  applyUndergroundPreset,
+} from "@/lib/underground-presets";
 import { TUNE_STYLES, applyTuneStyle } from "@/lib/tune-presets";
 import {
   stockPlugins,
@@ -32,6 +36,38 @@ export default function StockRack({
           Bypass rack
         </button>
       </div>
+      <details open>
+        <summary>Underground preset library</summary>
+        <p>
+          Original artist-inspired starting points, not official artist settings
+          or endorsements. Choose your song’s key below.
+        </p>
+        <select
+          aria-label="Underground preset"
+          disabled={disabled}
+          value=""
+          onChange={(e) => {
+            if (e.target.value)
+              update(applyUndergroundPreset(track, e.target.value));
+          }}
+        >
+          <option value="">Choose vocal or adlib preset…</option>
+          {(["Vocals", "Adlibs"] as const).map((category) => (
+            <optgroup key={category} label={category}>
+              {UNDERGROUND_PRESETS.filter((p) => p.category === category).map(
+                (p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ),
+              )}
+            </optgroup>
+          ))}
+        </select>
+        <a href="/presets" target="_blank" rel="noreferrer">
+          Browse all presets ↗
+        </a>
+      </details>
       <details open>
         <summary>Tuning studio · six vocal chains</summary>
         <p>

@@ -8,11 +8,13 @@ export default async function StudioPage({
     open?: string;
     account?: string;
     beat?: string;
+    preset?: string;
   }>;
 }) {
   const q = await searchParams;
   return (
     <Studio
+      initialPreset={!q.project && !q.beat ? q.preset : undefined}
       initialSession={
         q.beat
           ? { id: q.beat, source: "beat" }

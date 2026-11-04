@@ -30,6 +30,7 @@ export default function CommunityLinks() {
   }, []);
   return (
     <>
+      <Link href="/presets">Presets</Link>
       <Link href="/beats">Beats</Link>
       <Link href="/messages">DMs</Link>
       <Link href="/notifications">

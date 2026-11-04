@@ -179,3 +179,29 @@ test("color plugins change audio, preserve duration and remain bypassable", asyn
   }
   assert.deepEqual(input, original);
 });
+import {
+  UNDERGROUND_PRESETS,
+  applyUndergroundPreset,
+} from "../src/lib/underground-presets";
+test("all underground presets validate and preserve key, audio edits and mix position", async () => {
+  const t = newTrack("Lead");
+  t.plugins = stockPlugins();
+  t.plugins.pitch.root = 8;
+  t.plugins.pitch.scale = "minor";
+  assert.equal(new Set(UNDERGROUND_PRESETS.map((p) => p.id)).size, 16);
+  assert.equal(UNDERGROUND_PRESETS.filter((p) => !p.artist).length, 6);
+  for (const preset of UNDERGROUND_PRESETS) {
+    const next = { ...t, ...applyUndergroundPreset(t, preset.id) },
+      p = newProject();
+    p.tracks = [next];
+    validateProject(p);
+    assert.equal(next.gain, t.gain);
+    assert.equal(next.pan, t.pan);
+    assert.equal(next.clips, t.clips);
+    assert.equal(next.plugins!.pitch.root, 8);
+    assert.equal(next.plugins!.pitch.scale, "minor");
+    const result = await processStock([tone(455)], rate, next.plugins!);
+    assert.equal(result[0].length, rate);
+    assert.ok(result[0].every(Number.isFinite));
+  }
+});

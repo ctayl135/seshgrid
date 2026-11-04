@@ -3,6 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { AudioEngine } from "@/lib/audio";
 import {
+  UNDERGROUND_PRESETS,
+  applyUndergroundPreset,
+} from "@/lib/underground-presets";
+import {
   newProject,
   newTrack,
   projectEnd,
@@ -59,9 +63,11 @@ function download(blob: Blob, name: string) {
 export default function Studio({
   initialSession,
   initialDialog,
+  initialPreset,
 }: {
   initialSession?: { id: string; source: string };
   initialDialog?: "auth" | "projects";
+  initialPreset?: string;
 } = {}) {
   const router = useRouter();
   const cloudMeta = useRef<{
@@ -149,7 +155,17 @@ export default function Studio({
   );
   useEffect(() => {
     engine.current = new AudioEngine();
-    setProject(newProject());
+    const fresh = newProject();
+    const preset = UNDERGROUND_PRESETS.find((p) => p.id === initialPreset);
+    if (preset) {
+      const vocal = newTrack(preset.name);
+      Object.assign(vocal, applyUndergroundPreset(vocal, preset.id));
+      vocal.role = preset.category === "Adlibs" ? "adlib" : "vocal";
+      fresh.tracks = [vocal];
+      select(vocal.id);
+      setArmed(vocal.id);
+    }
+    setProject(fresh);
     const s = supabase;
     if (s)
       void s.auth
