@@ -35,9 +35,13 @@
 
 - [x] NOIR home screen and Sessions tab for new, saved and recovered work.
 
+- [x] Producer beat posting, BPM/usage notes and permission-gated beat-to-session import.
+- [x] Participant-only DMs and in-app notifications with invitation actions.
+- [x] Accepted editor/listen-only invitations, revocation and revision-checked shared saves.
+
 ## Stabilization
 
-Add revision conflict detection, cloud autosave, export peak management, storage garbage collection and project deletion. Broaden browser/device testing. Improve keyboard navigation, modal focus management and timeline editing ergonomics.
+Add cloud autosave, export peak management, storage garbage collection and project deletion. Broaden browser/device testing. Improve keyboard navigation, modal focus management and timeline editing ergonomics.
 
 ## Future phases (out of Phase 1 scope)
 

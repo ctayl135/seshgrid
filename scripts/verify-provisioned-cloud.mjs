@@ -3,17 +3,21 @@ import { randomBytes, randomUUID } from "node:crypto";
 import { databaseClient } from "./database-client.mjs";
 // Isolated integration fixtures: never send email, persist passwords, or modify existing users.
 const client = await databaseClient();
-const accounts = ["A", "B"].map((suffix) => ({
+const accounts = ["A", "B", "C"].map((suffix) => ({
   suffix,
   id: randomUUID(),
   email: `seshgrid-qa-${randomUUID()}@example.invalid`,
   password: randomBytes(32).toString("base64url"),
 }));
 let studio;
+let stage = "setup";
 let projectId;
 let audioPath;
 let sharedPath;
 let secondClient;
+let thirdClient;
+const extraShared = [];
+const extraAudio = [];
 let anonymous;
 try {
   await client.query("begin");
@@ -70,6 +74,7 @@ try {
   Object.assign(track, applyVocalPreset(track, "ping-pong"));
   audioPath = `${accounts[0].id}/${project.id}/${assetId}`;
   const session = { project, assets: [{ id: assetId, blob }] };
+  stage = "owner-save";
   await storage.saveCloud(session, accounts[0].id);
   project.name = "Updated temporary cloud round trip";
   await storage.saveCloud(session, accounts[0].id);
@@ -78,6 +83,8 @@ try {
     listed.some((p) => p.id === project.id),
     "Cloud project is listed",
   );
+  stage = "owner-reopen";
+  const legacy=await studio.from("projects").update({name:project.name}).eq("id",project.id).select("revision");assert.equal(legacy.error,null,"Legacy private owner saves remain supported");assert.equal(legacy.data.length,1);session.cloudRevision=legacy.data[0].revision;
   const restored = await storage.loadCloud(project.id, accounts[0].id);
   assert.deepEqual(restored.project, project);
   assert.deepEqual(
@@ -95,6 +102,7 @@ try {
     (await social.getProfile(accounts[0].id)).display_name,
     "Temporary Noir Artist",
   );
+  stage = "publish-song";
   const releaseId = await social.publishMix(
     accounts[0].id,
     "Temporary synthetic release",
@@ -172,9 +180,12 @@ try {
     "Unpublished releases leave the feed",
   );
   assert.ok(
-    (await secondClient.storage.from("shared-mixes").download(sharedPath))
-      .error,
-    "Other members cannot download unpublished mixes",
+    (
+      await secondClient.storage
+        .from("shared-mixes")
+        .createSignedUrl(sharedPath, 60)
+    ).error,
+    "Other members cannot obtain fresh playback links for unpublished mixes",
   );
   assert.equal(
     (await studio.storage.from("shared-mixes").download(sharedPath)).error,
@@ -186,6 +197,256 @@ try {
     (await social.releases()).some((p) => p.id === releaseId),
     "Owners can republish",
   );
+  stage = "community-profiles";
+  const community = await import("../src/lib/community.ts");
+  thirdClient = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    opts,
+  );
+  assert.equal(
+    (
+      await thirdClient.auth.signInWithPassword({
+        email: accounts[2].email,
+        password: accounts[2].password,
+      })
+    ).error,
+    null,
+  );
+  for (const [c, a] of [
+    [secondClient, accounts[1]],
+    [thirdClient, accounts[2]],
+  ])
+    assert.equal(
+      (
+        await c.from("artist_profiles").insert({
+          id: a.id,
+          display_name: "Temporary " + a.suffix,
+          genre: "Rage",
+        })
+      ).error,
+      null,
+    );
+  await community.sendMessage(
+    accounts[0].id,
+    accounts[1].id,
+    "Synthetic private message",
+  );
+  const dm = (
+    await secondClient
+      .from("direct_messages")
+      .select("*")
+      .eq("sender_id", accounts[0].id)
+  ).data[0];
+  assert.equal(dm.body, "Synthetic private message");
+  assert.equal(
+    (await thirdClient.from("direct_messages").select("id").eq("id", dm.id))
+      .data.length,
+    0,
+    "Unrelated artists cannot read DMs",
+  );
+  assert.ok(
+    (
+      await secondClient.from("direct_messages").insert({
+        sender_id: accounts[0].id,
+        recipient_id: accounts[2].id,
+        body: "Spoof",
+      })
+    ).error,
+    "Senders cannot be impersonated",
+  );
+  assert.ok(
+    (await secondClient.from("notifications").select("id")).data.length > 0,
+    "Messages generate recipient notifications",
+  );
+  assert.equal(
+    (
+      await thirdClient
+        .from("notifications")
+        .select("id")
+        .eq("user_id", accounts[1].id)
+    ).data.length,
+    0,
+    "Notifications are owner-only",
+  );
+  assert.equal(
+    (await secondClient.rpc("read_inbox", { p_sender: accounts[0].id })).error,
+    null,
+  );
+  assert.ok(
+    (
+      await studio
+        .from("direct_messages")
+        .select("read_at")
+        .eq("id", dm.id)
+        .single()
+    ).data.read_at,
+    "Recipients can mark their conversation read",
+  );
+  stage = "publish-beat";
+  const beatId = await social.publishMix(
+    accounts[0].id,
+    "Synthetic producer beat",
+    "Rage",
+    blob,
+    {
+      bpm: 140,
+      license_notes: "Synthetic test only",
+      allow_session_use: true,
+      duration: 0.1,
+    },
+  );
+  extraShared.push(accounts[0].id + "/" + beatId + "/mix.wav");
+  assert.ok((await community.beats()).some((b) => b.id === beatId));
+  stage = "invite-editor";
+  const inviteId = await community.communityRPC("invite_collaborator", {
+    p_project: projectId,
+    p_member: accounts[1].id,
+    p_role: "editor",
+  });
+  assert.equal(
+    (await secondClient.from("projects").select("id").eq("id", projectId)).data
+      .length,
+    0,
+    "Pending invitations do not expose projects",
+  );
+  assert.ok(
+    (await secondClient.storage.from("project-audio").download(audioPath))
+      .error,
+    "Pending invitations do not expose sources",
+  );
+  assert.ok(
+    (
+      await thirdClient.rpc("respond_invitation", {
+        p_id: inviteId,
+        p_accept: true,
+      })
+    ).error,
+    "Invitations cannot be accepted by another user",
+  );
+  assert.equal(
+    (
+      await secondClient.rpc("respond_invitation", {
+        p_id: inviteId,
+        p_accept: true,
+      })
+    ).error,
+    null,
+  );
+  const stale = structuredClone(session);
+  await studio.auth.signOut();
+  assert.equal(
+    (
+      await studio.auth.signInWithPassword({
+        email: accounts[1].email,
+        password: accounts[1].password,
+      })
+    ).error,
+    null,
+  );
+  stage = "editor-open";
+  const shared = await storage.loadCloud(projectId, accounts[1].id);
+  assert.equal(shared.ownerId, accounts[0].id);
+  assert.equal(shared.canEdit, true);
+  const extraId = randomUUID();
+  extraAudio.push(accounts[0].id + "/" + projectId + "/" + extraId);
+  shared.assets.push({ id: extraId, blob });
+  shared.project.tracks[0].clips.push({
+    id: randomUUID(),
+    assetId: extraId,
+    start: 1,
+    offset: 0,
+    duration: 0.1,
+  });
+  shared.project.name = "Edited by accepted collaborator";
+  stage = "editor-save";
+  await storage.saveCloud(shared, accounts[1].id);
+  stage = "beat-import";
+  const beatCopy = await community.beatSession(beatId);
+  assert.equal(beatCopy.project.tracks[0].role, "beat");
+  assert.equal(beatCopy.project.bpm, 140);
+  assert.notEqual(beatCopy.project.id, projectId);
+  const takeOwner=await studio.from("projects").update({owner_id:accounts[1].id}).eq("id",projectId).select("id");assert.ok(takeOwner.error||takeOwner.data.length===0,"Editors cannot take ownership");
+
+  await studio.auth.signOut();
+  await studio.auth.signInWithPassword({
+    email: accounts[0].email,
+    password: accounts[0].password,
+  });
+  assert.equal(
+    (await storage.loadCloud(projectId, accounts[0].id)).project.name,
+    "Edited by accepted collaborator",
+  );
+  stage = "stale-save";
+  await assert.rejects(
+    () => storage.saveCloud(stale, accounts[0].id),
+    (error) => String(error?.message).includes("Session changed"),
+  );
+  stage = "viewer-access";
+  const viewer = await community.communityRPC("invite_collaborator", {
+    p_project: projectId,
+    p_member: accounts[2].id,
+    p_role: "viewer",
+  });
+  assert.equal(
+    (
+      await thirdClient.rpc("respond_invitation", {
+        p_id: viewer,
+        p_accept: true,
+      })
+    ).error,
+    null,
+  );
+  assert.equal(
+    (
+      await thirdClient.rpc("project_access", {
+        p_id: projectId,
+        p_write: false,
+      })
+    ).data,
+    true,
+  );
+  assert.equal(
+    (
+      await thirdClient.rpc("project_access", {
+        p_id: projectId,
+        p_write: true,
+      })
+    ).data,
+    false,
+  );
+  assert.ok(
+    (
+      await thirdClient.rpc("save_session", {
+        p_id: projectId,
+        p_owner: accounts[0].id,
+        p_name: "No",
+        p_manifest: shared.project,
+        p_updated: new Date().toISOString(),
+        p_revision: shared.cloudRevision,
+      })
+    ).error,
+    "Viewers cannot save shared edits",
+  );
+  stage = "revoke";
+  await community.communityRPC("revoke_collaborator", { p_id: inviteId });
+  assert.equal(
+    (await secondClient.from("projects").select("id").eq("id", projectId)).data
+      .length,
+    0,
+    "Revocation removes project access",
+  );
+  assert.ok(
+    (
+      await secondClient.storage
+        .from("project-audio")
+        .createSignedUrl(audioPath, 60)
+    ).error,
+    "Revocation removes fresh source access",
+  );
+  console.log(
+    "Live beats/DM/invite checks passed: private messages, unread notifications, beat-to-session import, pending denial, editor source upload and save, stale-save rejection, owner immutability, viewer denial and revocation.",
+  );
   console.log(
     "Live artist/feed checks passed: profile save, mix publish, member playback, anonymous denial, owner-only edits, unpublish denial and republish.",
   );
@@ -195,11 +456,20 @@ try {
 } catch (error) {
   await client.query("rollback").catch(() => {});
   console.error(
-    `Live cloud verification failed (${error.code || error.name}): ${error instanceof assert.AssertionError ? error.message.split("\n")[0] : "Check the test stage and provider configuration; credentials were not printed."}`,
+    `Live cloud verification failed at ${stage} (${error.code || error.name}): ${error instanceof assert.AssertionError ? error.message.split("\n")[0] : "Check the test stage and provider configuration; credentials were not printed."}`,
   );
   process.exitCode = 1;
 } finally {
   if (studio?.auth) {
+    await studio.auth.signOut();
+    await studio.auth.signInWithPassword({
+      email: accounts[0].email,
+      password: accounts[0].password,
+    });
+    if (extraShared.length)
+      await studio.storage.from("shared-mixes").remove(extraShared);
+    if (extraAudio.length)
+      await studio.storage.from("project-audio").remove(extraAudio);
     if (sharedPath)
       await studio.storage.from("shared-mixes").remove([sharedPath]);
     if (audioPath)
@@ -208,6 +478,7 @@ try {
     await studio.auth.signOut();
   }
   await secondClient?.auth.signOut();
+  await thirdClient?.auth.signOut();
   await anonymous?.auth.signOut();
   // Delete exactly the temporary fixture identities created by this run.
   await client.query("delete from auth.users where id = any($1::uuid[])", [

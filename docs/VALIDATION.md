@@ -106,3 +106,13 @@ Deployment dpl_HRf4T1eViHCMHu8wX26EFHvEdUxU is Ready. Both the existing private 
 - Session cards combine local and signed-in cloud projects and retain recovery entries. Cloud authorization remains enforced by the existing owner policies. Studio route changes do not publish or share projects.
 
 Private deployment dpl_4fwg1bQJWd5esvnRsSQF8PZdV3Mg is Ready and assigned to both existing test addresses. Hosted Home and Sessions navigation, saved-project visibility and recovery-draft visibility passed. The app name is NOIR; browser storage stays at its existing origins.
+
+## Community and collaboration — November 4, 2026
+
+- All 30 automated tests pass, including message validation and bidirectional conversation ordering. TypeScript, production build and client credential scan pass.
+- Applied migrations 003–007. Live three-account tests pass for private DMs, sender impersonation denial, owner-only notifications/read status, beat posting/import, pending invite source denial, wrong-user acceptance denial, accepted editor source upload/save, owner immutability, stale-save rejection, viewer write denial and revocation. Existing source-byte save/reopen, anonymous denial and feed publication checks still pass.
+- A shared-source policy lookup initially resolved an ambiguous name against the project row; migration 005 explicitly qualifies the storage object path. Authorized reads now use fresh signed URLs rather than relying on previously cached authenticated-download responses. Shared manifest updates require revision checks; migration 007 preserves legacy private-owner saves while denying direct shared updates.
+- Browser checks passed for posting generated WAV audio with usage permission, opening that beat in a new session, cloud save, sending a DM to a temporary artist, sending an editor invitation, viewing recipient message/invitation notifications and acceptance. No user music or messages to real artists were used.
+- Current limits: signed-in private testing, four-minute/50 MB beat uploads, 15-second visible-page inbox polling, recent-message history bounds and asynchronous shared saves. No live simultaneous edit merging, browser push or email notifications.
+
+The browser recipient accepted the invitation, reopened the shared source audio and successfully saved a title edit to the owner’s cloud project. Temporary UI accounts, beat posts, shared source files, messages and invitations were removed after verification.

@@ -1,4 +1,6 @@
 "use client";
+import CommunityLinks from "./CommunityLinks";
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { listLocal, listCloud, supabase } from "@/lib/storage";
@@ -10,6 +12,7 @@ type SessionCard = {
   date: string;
   source: "local" | "cloud";
   tracks?: number;
+  shared?: boolean;
 };
 export default function HomeScreen({
   sessions = false,
@@ -58,12 +61,17 @@ export default function HomeScreen({
       if (results[1].status === "fulfilled")
         for (const p of results[1].value) {
           const old = combined.get(p.id);
-          if (!old || Date.parse(p.updated_at) > Date.parse(old.date))
+          if (
+            !old ||
+            p.owner_id !== user?.id ||
+            Date.parse(p.updated_at) > Date.parse(old.date)
+          )
             combined.set(p.id, {
               id: p.id,
               name: p.name,
               date: p.updated_at,
               source: "cloud",
+              shared: p.owner_id !== user?.id,
             });
         }
       setItems(
@@ -105,6 +113,7 @@ export default function HomeScreen({
             Sessions
           </Link>
           <Link href="/fyp">For You</Link>
+          <CommunityLinks />
           <Link href="/profile">Profile</Link>
         </div>
         <Link className="home-account" href="/studio?account=1">
@@ -210,7 +219,11 @@ export default function HomeScreen({
               >
                 <span className="session-card-icon">≋</span>
                 <small>
-                  {p.source === "cloud" ? "PRIVATE CLOUD" : "THIS BROWSER"}
+                  {p.shared
+                    ? "SHARED SESSION"
+                    : p.source === "cloud"
+                      ? "PRIVATE CLOUD"
+                      : "THIS BROWSER"}
                 </small>
                 <h3>{p.name}</h3>
                 <p>

@@ -69,7 +69,9 @@ export async function releases(owner?: string) {
     .select("*,artist_profiles(display_name)")
     .order("created_at", { ascending: false })
     .limit(100);
-  q = owner ? q.eq("owner_id", owner) : q.eq("published", true);
+  q = owner
+    ? q.eq("owner_id", owner)
+    : q.eq("published", true).eq("kind", "song");
   const { data, error } = await q;
   if (error) throw error;
   return data as unknown as Release[];
@@ -95,6 +97,12 @@ export async function publishMix(
   title: string,
   genre: string,
   blob: Blob,
+  beat?: {
+    bpm: number;
+    license_notes: string;
+    allow_session_use: boolean;
+    duration: number;
+  },
 ) {
   if (!supabase) throw new Error("Sign in first");
   if (
@@ -122,6 +130,7 @@ export async function publishMix(
     genre,
     audio_path: path,
     published: true,
+    ...(beat ? { kind: "beat", ...beat } : {}),
   });
   if (error) {
     await supabase.storage.from("shared-mixes").remove([path]);

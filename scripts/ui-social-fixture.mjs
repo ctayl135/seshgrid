@@ -2,7 +2,9 @@ import { randomUUID, randomBytes } from "node:crypto";
 import { readFile, writeFile, mkdir, unlink } from "node:fs/promises";
 import { databaseClient } from "./database-client.mjs";
 import { createClient } from "@supabase/supabase-js";
-const path = "test-results/noir-ui-fixture.json",
+const path = process.argv.includes("--peer")
+    ? "test-results/noir-ui-peer.json"
+    : "test-results/noir-ui-fixture.json",
   db = await databaseClient();
 try {
   if (process.argv.includes("--cleanup")) {
@@ -42,6 +44,24 @@ try {
         .remove(posts.data.map((p) => p.audio_path));
       if (removed.error) throw removed.error;
     }
+    const sessions = await client
+      .from("projects")
+      .select("id,manifest")
+      .eq("owner_id", a.id);
+    if (sessions.error) throw sessions.error;
+    for (const p of sessions.data ?? []) {
+      const ids = [
+        ...new Set(
+          p.manifest.tracks.flatMap((t) => t.clips.map((c) => c.assetId)),
+        ),
+      ];
+      if (ids.length) {
+        const r = await client.storage
+          .from("project-audio")
+          .remove(ids.map((id) => a.id + "/" + p.id + "/" + id));
+        if (r.error) throw r.error;
+      }
+    }
     await client.auth.signOut();
     await db.query("delete from auth.users where id=$1 and email=$2", [
       a.id,
@@ -73,6 +93,11 @@ try {
         JSON.stringify({ sub: a.id, email: a.email, email_verified: true }),
       ],
     );
+    if (process.argv.includes("--peer"))
+      await db.query(
+        "insert into public.artist_profiles(id,display_name,genre) values($1,$2,$3)",
+        [a.id, "NOIR UI COLLABORATOR", "Rage"],
+      );
     await mkdir("test-results", { recursive: true });
     await writeFile(path, JSON.stringify(a), { flag: "wx" });
     await db.query("commit");

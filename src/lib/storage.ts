@@ -17,7 +17,13 @@ export const supabase =
         },
       })
     : null;
-export type SavedSession = { project: Project; assets: Asset[] };
+export type SavedSession = {
+  project: Project;
+  assets: Asset[];
+  ownerId?: string;
+  cloudRevision?: number;
+  canEdit?: boolean;
+};
 const storageError = () =>
   new Error(
     "Browser storage did not respond. Download a project backup or use cloud saving.",
@@ -107,15 +113,33 @@ export async function listLocal(): Promise<SavedSession[]> {
     d.close();
   }
 }
+async function privateAudio(path: string): Promise<Blob> {
+  if (!supabase) throw new Error("Sign in first");
+  const { data, error } = await supabase.storage
+    .from("project-audio")
+    .createSignedUrl(path, 60);
+  if (error) throw error;
+  const response = await fetch(data.signedUrl, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(45000),
+  });
+  if (!response.ok)
+    throw new Error(
+      "Source audio could not be loaded. Refresh the cloud session and try again.",
+    );
+  return response.blob();
+}
 export async function saveCloud(session: SavedSession, userId: string) {
   if (!supabase) throw new Error("Configure Supabase first");
+  const ownerId = session.ownerId ?? userId;
   // Immutable assets upload before the manifest. A failed upload never replaces a good project.
   for (const a of session.assets) {
-    const path = `${userId}/${session.project.id}/${a.id}`;
+    const path = `${ownerId}/${session.project.id}/${a.id}`;
     const { error } = await supabase.storage
       .from("project-audio")
       .upload(path, a.blob, {
         upsert: false,
+        cacheControl: "0",
         contentType: a.blob.type || "application/octet-stream",
       });
     if (error) {
@@ -124,10 +148,7 @@ export async function saveCloud(session: SavedSession, userId: string) {
         status === "409" ||
         (status === "400" && /already exists/i.test(error.message));
       if (!duplicate) throw error;
-      const { data: existing, error: readError } = await supabase.storage
-        .from("project-audio")
-        .download(path);
-      if (readError) throw readError;
+      const existing = await privateAudio(path);
       if (existing.size !== a.blob.size)
         throw new Error(
           "Cloud audio differs from this project backup. Create a new session to avoid replacing an existing source.",
@@ -146,20 +167,23 @@ export async function saveCloud(session: SavedSession, userId: string) {
         );
     }
   }
-  const { error } = await supabase.from("projects").upsert({
-    id: session.project.id,
-    owner_id: userId,
-    name: session.project.name,
-    manifest: session.project,
-    updated_at: session.project.updatedAt,
+  const { data, error } = await supabase.rpc("save_session", {
+    p_id: session.project.id,
+    p_owner: ownerId,
+    p_name: session.project.name,
+    p_manifest: session.project,
+    p_updated: session.project.updatedAt,
+    p_revision: session.cloudRevision ?? null,
   });
   if (error) throw error;
+  session.ownerId = ownerId;
+  session.cloudRevision = data as number;
 }
 export async function listCloud() {
   if (!supabase) return [];
   const { data, error } = await supabase
     .from("projects")
-    .select("id,name,updated_at")
+    .select("id,name,updated_at,owner_id,revision")
     .order("updated_at", { ascending: false });
   if (error) throw error;
   return data ?? [];
@@ -171,10 +195,16 @@ export async function loadCloud(
   if (!supabase) throw new Error("Configure Supabase first");
   const { data, error } = await supabase
     .from("projects")
-    .select("manifest")
+    .select("manifest,owner_id,revision")
     .eq("id", id)
     .single();
   if (error) throw error;
+  const ownerId = data.owner_id as string;
+  const { data: canEdit, error: accessError } = await supabase.rpc(
+    "project_access",
+    { p_id: id, p_write: true },
+  );
+  if (accessError) throw accessError;
   const project = validateProject(data.manifest);
   if (project.id !== id)
     throw new Error("Cloud project identity does not match its manifest");
@@ -183,11 +213,14 @@ export async function loadCloud(
     ],
     assets: Asset[] = [];
   for (const assetId of ids) {
-    const { data, error } = await supabase.storage
-      .from("project-audio")
-      .download(`${userId}/${id}/${assetId}`);
-    if (error) throw error;
-    assets.push({ id: assetId, blob: data });
+    const blob = await privateAudio(`${ownerId}/${id}/${assetId}`);
+    assets.push({ id: assetId, blob });
   }
-  return { project, assets };
+  return {
+    project,
+    assets,
+    ownerId,
+    cloudRevision: data.revision,
+    canEdit: !!canEdit,
+  };
 }

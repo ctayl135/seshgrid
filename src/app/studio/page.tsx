@@ -7,13 +7,18 @@ export default async function StudioPage({
     source?: string;
     open?: string;
     account?: string;
+    beat?: string;
   }>;
 }) {
   const q = await searchParams;
   return (
     <Studio
       initialSession={
-        q.project ? { id: q.project, source: q.source ?? "local" } : undefined
+        q.beat
+          ? { id: q.beat, source: "beat" }
+          : q.project
+            ? { id: q.project, source: q.source ?? "local" }
+            : undefined
       }
       initialDialog={
         q.account === "1"

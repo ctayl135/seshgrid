@@ -28,6 +28,8 @@ import Waveform from "./Waveform";
 import VocalRack from "./VocalRack";
 import BeatRack from "./BeatRack";
 import PublishPanel from "./PublishPanel";
+import InvitePanel from "./InvitePanel";
+import { beatSession } from "@/lib/community";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { normalizationLevel } from "@/lib/normalize";
@@ -59,6 +61,12 @@ export default function Studio({
   initialDialog?: "auth" | "projects";
 } = {}) {
   const router = useRouter();
+  const cloudMeta = useRef<{
+    id: string;
+    ownerId?: string;
+    cloudRevision?: number;
+  }>({ id: "" });
+  const [readOnly, setReadOnly] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const openedInitial = useRef(false);
   const editor = useProjectEditor(),
@@ -76,7 +84,9 @@ export default function Studio({
     ),
     [error, setError] = useState(""),
     [user, setUser] = useState<User | null>(null),
-    [modal, setModal] = useState<"projects" | "auth" | "publish" | null>(null),
+    [modal, setModal] = useState<
+      "projects" | "auth" | "publish" | "invite" | null
+    >(null),
     [local, setLocal] = useState<SavedSession[]>([]),
     [cloud, setCloud] = useState<
       { id: string; name: string; updated_at: string }[]
@@ -177,6 +187,7 @@ export default function Studio({
     return () => cancelAnimationFrame(frame);
   }, [playing]);
   const edit = (fn: (p: Project) => Project, group?: string) => {
+    if (readOnly) return;
     editor.edit(fn, group);
     setDirty(true);
   };
@@ -224,6 +235,7 @@ export default function Studio({
   const historyAction = (kind: "undo" | "redo") => {
     if (
       busy ||
+      readOnly ||
       recordFlag.current ||
       transportFlag.current ||
       modal ||
@@ -405,6 +417,12 @@ export default function Studio({
         "Source audio is missing. Reopen a backup before saving.",
       );
     return {
+      ...(cloudMeta.current.id === p.id
+        ? {
+            ownerId: cloudMeta.current.ownerId,
+            cloudRevision: cloudMeta.current.cloudRevision,
+          }
+        : {}),
       project: validateProject(p),
       assets: [...assets.current]
         .filter(([id]) => used.has(id))
@@ -421,6 +439,8 @@ export default function Studio({
     });
   const save = () =>
     run(async () => {
+      if (readOnly)
+        throw new Error("Editor access is required to save this shared song");
       const session = snapshot();
       const results = await Promise.allSettled([
         saveLocal(session),
@@ -433,6 +453,14 @@ export default function Studio({
         throw new Error(
           "Saving to browser/cloud failed. A project backup download was started. Keep it and reopen using Open project file.",
         );
+      }
+      if (cloudOK) {
+        cloudMeta.current = {
+          id: session.project.id,
+          ownerId: session.ownerId,
+          cloudRevision: session.cloudRevision,
+        };
+        if (localOK) await saveLocal(session).catch(() => {});
       }
       editor.saved(session.project);
       setDirty(false);
@@ -448,7 +476,11 @@ export default function Studio({
       );
       if (user && !cloudOK)
         throw new Error(
-          "Saved locally, but cloud sync failed. Check your connection and Supabase setup, then save again.",
+          "Saved locally, but the cloud save failed: " +
+            (results[1]?.status === "rejected"
+              ? (results[1].reason?.message ?? "Unknown cloud error")
+              : "Unknown cloud error") +
+            ". Open the latest cloud version or duplicate your work to keep an independent copy.",
         );
     });
   const openProjects = () => {
@@ -500,6 +532,12 @@ export default function Studio({
       assets.current = new Map(session.assets.map((a) => [a.id, a.blob]));
       await recovery.clear(recoveryId).catch(() => {});
       setProject(p);
+      cloudMeta.current = {
+        id: p.id,
+        ownerId: session.ownerId,
+        cloudRevision: session.cloudRevision,
+      };
+      setReadOnly(session.canEdit === false);
       select(p.tracks[0]?.id ?? "");
       selectClip("");
       setPosition(0);
@@ -526,6 +564,7 @@ export default function Studio({
       const { id, source } = initialSession;
       void reopen(
         async () => {
+          if (source === "beat") return beatSession(id);
           if (source === "recovery") return loadRecovery(id);
           if (source === "cloud") {
             if (!user)
@@ -552,7 +591,7 @@ export default function Studio({
   const track = project.tracks.find((t) => t.id === selected),
     clip = project.tracks.flatMap((t) => t.clips).find((c) => c.id === clipId),
     width = Math.max(900, (projectEnd(project) + 15) * PX),
-    locked = busy || recording || playing;
+    locked = busy || recording || playing || readOnly;
   const numberField = (
     label: string,
     value: number,
@@ -675,6 +714,12 @@ export default function Studio({
             Projects
           </button>
           <button
+            disabled={busy || recording || playing || !user}
+            onClick={() => setModal("invite")}
+          >
+            Collaborators
+          </button>
+          <button
             disabled={locked || !project.name.trim()}
             onClick={backup}
             title="Download a project file with all audio and edits"
@@ -710,6 +755,12 @@ export default function Studio({
           </button>
         </div>
       </header>
+      {readOnly && (
+        <div className="recovery-warning" role="status">
+          Listen-only shared session. Editing and saving the shared version
+          require editor access from the owner.
+        </div>
+      )}
       <section className="transport" aria-label="Transport">
         <div className="transport-buttons">
           <button
@@ -747,7 +798,7 @@ export default function Studio({
           <button
             className={`record ${recording ? "active" : ""}`}
             aria-label={recording ? "Stop recording" : "Record vocals"}
-            disabled={busy}
+            disabled={busy || readOnly}
             onClick={recording ? stopRecording : startRecording}
           >
             {recording ? "■" : "●"}
@@ -1210,7 +1261,7 @@ export default function Studio({
               </div>
               <div className="mix-buttons">
                 <button
-                  disabled={busy}
+                  disabled={busy || readOnly}
                   aria-pressed={track.mute}
                   className={track.mute ? "toggled" : ""}
                   onClick={() => patchTrack(track.id, { mute: !track.mute })}
@@ -1218,7 +1269,7 @@ export default function Studio({
                   Mute
                 </button>
                 <button
-                  disabled={busy}
+                  disabled={busy || readOnly}
                   aria-pressed={track.solo}
                   className={track.solo ? "toggled" : ""}
                   onClick={() => patchTrack(track.id, { solo: !track.solo })}
@@ -1246,13 +1297,13 @@ export default function Studio({
               {track.role === "beat" ? (
                 <BeatRack
                   track={track}
-                  disabled={busy}
+                  disabled={busy || readOnly}
                   update={(patch) => patchTrack(track.id, patch)}
                 />
               ) : (
                 <VocalRack
                   track={track}
-                  disabled={busy}
+                  disabled={busy || readOnly}
                   update={(patch) => patchTrack(track.id, patch)}
                 />
               )}
@@ -1295,7 +1346,7 @@ export default function Studio({
                   </span>
                   <input
                     aria-label={label}
-                    disabled={busy}
+                    disabled={busy || readOnly}
                     type="range"
                     min={min}
                     max={max}
@@ -1355,6 +1406,16 @@ export default function Studio({
       {error && (
         <div role="alert" className="error">
           {error}
+          {user && cloudMeta.current.id === project.id && (
+            <button
+              disabled={busy}
+              onClick={() =>
+                reopen(() => loadCloud(project.id, user.id), undefined, "cloud")
+              }
+            >
+              Open latest cloud version
+            </button>
+          )}
           <button onClick={() => setError("")} aria-label="Dismiss error">
             ×
           </button>
@@ -1367,11 +1428,13 @@ export default function Studio({
             role="dialog"
             aria-modal="true"
             aria-label={
-              modal === "auth"
-                ? "Account"
-                : modal === "publish"
-                  ? "Publish mix"
-                  : "Saved projects"
+              modal === "invite"
+                ? "Song collaborators"
+                : modal === "auth"
+                  ? "Account"
+                  : modal === "publish"
+                    ? "Publish mix"
+                    : "Saved projects"
             }
           >
             <button
@@ -1381,7 +1444,13 @@ export default function Studio({
             >
               ×
             </button>
-            {modal === "auth" ? (
+            {modal === "invite" ? (
+              <InvitePanel
+                projectId={project.id}
+                userId={user?.id}
+                navigate={(path) => void navigate(path)}
+              />
+            ) : modal === "auth" ? (
               <>
                 <span className="eyebrow">YOUR SPACE TO CREATE</span>
                 <h2>{user ? "Your account" : "Welcome to NOIR"}</h2>
@@ -1510,11 +1579,14 @@ export default function Studio({
                 <button
                   disabled={busy || !project.name.trim()}
                   onClick={() => {
-                    edit((p) => ({
+                    cloudMeta.current = { id: "" };
+                    setReadOnly(false);
+                    editor.edit((p) => ({
                       ...p,
                       id: crypto.randomUUID(),
                       name: `${p.name.slice(0, 195)} copy`,
                     }));
+                    setDirty(true);
                     setModal(null);
                     router.replace("/studio", { scroll: false });
                     setMessage(
@@ -1539,6 +1611,8 @@ export default function Studio({
                     void recovery.clear().catch(() => {});
                     assets.current.clear();
                     engine.current!.buffers.clear();
+                    cloudMeta.current = { id: "" };
+                    setReadOnly(false);
                     setProject(newProject());
                     router.replace("/studio", { scroll: false });
                     select("");

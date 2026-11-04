@@ -4,6 +4,18 @@ A free browser recording studio built with Next.js, React, TypeScript, Web Audio
 
 Branded private studio: https://new-age-noir-ctayl135-6200-stripe.vercel.app. Existing browser projects remain available at https://seshgrid-lab-ctayl135-6200-stripe.vercel.app, which also runs the renamed app. Reuse this address for browser saves and recovery across preview updates. Projects stored at earlier deployment addresses remain there; transfer them using Backup → Open project file.
 
+## Beats, DMs, notifications and song invitations
+
+Beats (/beats) lets signed-in producers post WAV instrumentals up to four minutes / 50 MB, with title, genre, BPM and usage/credit notes. Producers explicitly choose whether artists may start sessions with a beat. Listen previews the posted audio; Use in session creates a separate editable beat track at the posted BPM. This does not time-stretch the source. Publishing a beat does not grant commercial rights beyond the producer's stated permission; no payments or subscriptions are implemented. Owners manage visibility from their Profile releases.
+
+DMs (/messages) supports private text conversations between artist profiles, with artist search, recent conversations, read status and a 2,000-character message limit. The database rejects sender impersonation and excludes unrelated users. Notifications (/notifications) shows incoming messages and collaboration invitations, with unread badges, Mark all read, Accept and Decline. Inbox pages check for updates every 15 seconds while visible. These are in-app notifications, without browser push or email. Conversation history currently shows the recent 200 messages; the recent-conversation index scans the latest 300 visible messages.
+
+Save a song to the cloud, then open Collaborators in the studio, find an artist profile and choose Editor or Listen-only. Only the owner can invite, change invitations or revoke access. Invitation acceptance grants project/source access. Accepted editors can add recordings and save the shared session; listen-only members cannot save edits to it. Shared sessions appear under Sessions. This is asynchronous collaboration, without live cursors, live audio streaming or automatic merging.
+
+The current studio uses the save_session function for cloud writes and a revision check. If another person has saved first, your work remains locally saved and the cloud overwrite is rejected. Duplicate to preserve an independent version or use Open latest cloud version. Project ownership is immutable. Members cannot delete the owner's source audio. Private audio reads use short-lived authorized links, and new source uploads disable caching. Revocation prevents new authorized opens, but cannot recall copies or audio already downloaded; issued links may remain valid for up to a minute. Local backups remain on the device where they were created.
+
+Apply numbered migrations through 007 in order (node scripts/migrate-cloud.mjs). They add beats metadata, participant-only message tables, owner-only notification tables, invitation acceptance/revocation, shared-source policies and revision-checked saves. No additional API keys or paid services are needed. Legacy owner-only private saves remain compatible, while direct shared-session updates are denied and must use revision-checked saves. Public signup/email setup remains deferred for private testing.
+
 ## Home and Sessions
 
 The home screen is now the default page at /. Sessions is a dedicated tab at /sessions, with New session, searchable saved sessions and recovery drafts. Browser and signed-in cloud copies are combined, keeping the newest saved copy of each project. Studio editing now lives at /studio. Open project backup enters the existing project-file importer and playlist view.

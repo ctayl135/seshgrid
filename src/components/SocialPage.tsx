@@ -1,4 +1,6 @@
 "use client";
+import CommunityLinks from "./CommunityLinks";
+
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
@@ -133,9 +135,15 @@ export default function SocialPage({
           <Link href="/">Home</Link>
           <Link href="/sessions">Sessions</Link>
           <Link href="/fyp">For You</Link>
+          <CommunityLinks />
           <Link href="/profile">Profile</Link>
         </div>
       </nav>
+      {mode === "profile" && user && !own && (
+        <Link className="community-action" href={"/messages?artist=" + target}>
+          Message artist
+        </Link>
+      )}
       <header className="social-hero">
         <span className="eyebrow">BY NEW AGE MUSIC · FREE TO CREATE</span>
         <h1>
