@@ -181,3 +181,9 @@ At the owner's request, the current NOIR build is now deployed to production. Pu
 Public access enables the local browser studio without a Vercel account. Cloud projects, recordings, DMs and shared session permissions remain account-protected. Public email signup remains deferred until email delivery is configured; visitors can record, save locally and export without signing in. The GitHub repository remains private.
 
 Primary public address: https://new-age-noir.vercel.app (November 4, 2026). Added as a Vercel project production domain and verified anonymous HTTP 200 with the NOIR title. Older addresses remain available for browser-local session continuity. Browser-local projects do not cross origins: download a Backup on the previous address and use Open project file at the new one. Cloud projects remain tied to their signed-in account.
+
+## Artist network
+
+Signed-in artists can save their name, bio and genre on Profile, discover the 100 most recently updated profiles, and follow/unfollow other artists from their profile page. Follower/following counts use database counts; follows are visible to signed-in members, with self-follows and impersonation prevented by database policies. Create a profile before following. Releases still use the studio Publish workflow; projects/source audio remain private. Apply migration 008 when setting up a fresh database.
+
+Direct Auxd publishing is pending identification of the intended Auxd service and its supported API/account authorization. No music is automatically sent to an unidentified external destination.

@@ -57,3 +57,6 @@ Virtual instruments and MIDI; revisioned collaboration; separate licensed beat m
 - [ ] Live microphone pitch monitoring, automatic repeated loop recording and graphical pitch editing remain future work.
 
 - [x] Six tuning/effect chains plus standalone chorus doubler, tremolo and digital crusher.
+
+- [x] Artist discovery, authenticated follow/unfollow and follower/following counts.
+- [ ] Direct Auxd release delivery: waiting for exact target service and supported integration.

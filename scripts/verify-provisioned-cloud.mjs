@@ -251,6 +251,95 @@ try {
       ).error,
       null,
     );
+  stage = "artist-follows";
+  const follow = { follower_id: accounts[0].id, artist_id: accounts[1].id };
+  assert.equal(
+    (
+      await studio
+        .from("artist_follows")
+        .upsert(follow, {
+          onConflict: "follower_id,artist_id",
+          ignoreDuplicates: true,
+        })
+    ).error,
+    null,
+  );
+  assert.equal(
+    (
+      await studio
+        .from("artist_follows")
+        .upsert(follow, {
+          onConflict: "follower_id,artist_id",
+          ignoreDuplicates: true,
+        })
+    ).error,
+    null,
+  );
+  assert.equal(
+    (
+      await secondClient
+        .from("artist_follows")
+        .select("*", { head: true, count: "exact" })
+        .eq("artist_id", accounts[1].id)
+    ).count,
+    1,
+  );
+  assert.ok(
+    (
+      await secondClient
+        .from("artist_follows")
+        .insert({ follower_id: accounts[0].id, artist_id: accounts[2].id })
+    ).error,
+    "Follower impersonation denied",
+  );
+  assert.ok(
+    (
+      await studio
+        .from("artist_follows")
+        .insert({ follower_id: accounts[0].id, artist_id: accounts[0].id })
+    ).error,
+    "Self follow denied",
+  );
+  assert.ok(
+    (await anonymous.from("artist_follows").select("*")).error,
+    "Anonymous follows denied",
+  );
+  await secondClient
+    .from("artist_follows")
+    .delete()
+    .eq("follower_id", accounts[0].id);
+  assert.equal(
+    (
+      await studio
+        .from("artist_follows")
+        .select("*", { head: true, count: "exact" })
+        .eq("follower_id", accounts[0].id)
+    ).count,
+    1,
+    "Other artists cannot remove your follows",
+  );
+  assert.equal(
+    (
+      await studio
+        .from("artist_follows")
+        .delete()
+        .eq("follower_id", accounts[0].id)
+        .eq("artist_id", accounts[1].id)
+    ).error,
+    null,
+  );
+  assert.equal(
+    (
+      await studio
+        .from("artist_follows")
+        .select("*", { head: true, count: "exact" })
+        .eq("follower_id", accounts[0].id)
+    ).count,
+    0,
+  );
+  console.log(
+    "Live artist follow checks passed: counts, duplicate safety, unfollow, self-follow and impersonation denial, anonymous denial and cross-account delete denial.",
+  );
   await community.sendMessage(
     accounts[0].id,
     accounts[1].id,

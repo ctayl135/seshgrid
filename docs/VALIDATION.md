@@ -137,3 +137,9 @@ Private deployment dpl_HFZDfEAJA1rveXGFKhRLhDwTssq3 is Ready and assigned to bot
 ## Public production launch — November 4, 2026
 
 Deployment dpl_2EdMywgWvH8UmLtvjQrP7MEuTTHB is Ready in production. Standard Vercel protection allows public production domains and retains preview protection. Both public home/studio and beats/sessions routes return HTTP 200 without cookies, authorization headers or protection bypass tokens. Confirmed NOIR title rather than a Vercel authentication page. The NOIR alias is now a project domain following production. Re-ran the live three-account privacy, source round-trip, DM, beat, invitation and revision matrix successfully; temporary fixtures removed. Public signup remains deferred, private sources remain protected and GitHub stays private.
+
+## Artist follows — November 4, 2026
+
+Migration 008 adds member-readable follows with owner-only insert/delete, a composite uniqueness key, self-follow rejection and profile foreign keys. Profile/For You now include artist discovery (100 recent profiles, local name filter), counts and follow/unfollow controls. Profiles and releases remain member-only; private project/source policies are unchanged.
+
+All 38 automated tests, production build, TypeScript and credential scan pass. Live three-account tests confirm follow counts, duplicate safety, own unfollow, self-follow/impersonation/anonymous denial and cross-account delete denial, alongside the existing privacy, publishing, beat, DM and collaborative-save matrix. Hosted UI test confirms profile save, discovery, following another temporary artist and count changing to one. Production deployment dpl_PJhzLJ21oYqaucoZCbZ3oV5FBVeh is Ready at the public NOIR address. Direct Auxd release integration is pending the requested exact service link/API; no external upload connection is claimed.
