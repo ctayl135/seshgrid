@@ -2226,7 +2226,7 @@ select {
 :root{--bg:#0a0a0a;--panel:#151515;--line:#333;--muted:#aaa;--accent:#f5f5f5}
 body{background:var(--bg)}
 .brand,.home-logo{color:#fff!important;display:flex;align-items:center;gap:10px}
-.brand::before,.home-logo::before{content:"";display:inline-block;width:36px;height:36px;flex:0 0 36px;background:url('/noir-mark.svg') center/contain no-repeat}
+.brand::before,.home-logo::before{content:"";display:inline-block;width:36px;height:36px;flex:0 0 36px;background:url('/noir-logo-mark.svg') center/contain no-repeat}
 .brand .logo{display:none}
 button.primary,.primary{background:#f5f5f5;color:#111;border-color:#f5f5f5}
 button.primary:hover:not(:disabled){background:#d8d8d8}

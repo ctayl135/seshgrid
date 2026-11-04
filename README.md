@@ -235,3 +235,5 @@ Motion edits are disabled during playback/recording. Curves are saved in local, 
 ## Monochrome NOIR identity
 
 The interface now uses black, white and grayscale for backgrounds, controls, track colors, meters, selection states, avatar placeholders and Volume Motion curves. Focus/selected controls retain bright outlines. The custom /noir-mark.svg combines an N monogram with a music note, appears beside NOIR in navigation and is used as the site icon. Uploaded artist photos retain their original colors.
+
+The owner-supplied N/music-note image is now the primary brand mark. The original is preserved at /noir-logo.png, with /noir-logo-mark.svg framing the artwork without its large surrounding margins for navigation and favicon use.
