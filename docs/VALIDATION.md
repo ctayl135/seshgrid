@@ -169,3 +169,9 @@ Follow-notification correction: migration 012 backfills missing inbox entries fo
 All 40 tests, TypeScript and production build pass. Real Chromium worker tests encode and decode generated stereo audio in WAV, MP3, M4A, FLAC, OGG, AAC and AIFF, verifying nonempty output, finite/non-silent audio, channels and duration (1.000–1.045 seconds for a one-second source). Opus failed a round-trip and is intentionally not offered for export. Studio loading now falls back to local conversion after native decode failure. Beat uploads transcode supported input to WAV before publishing. Vercel upload exclusions pass; no private files included. Production dpl_8Uh5qM6eCa46jjWoE2txM8HDCxmB is Ready.
 
 Hosted studio verification also passed: imported a generated portable session, selected MP3, downloaded the real converted MP3, and uploaded it back as a new playable track. FLAC selector updates the Export button. No user recordings were used for conversion tests.
+
+## Timeline tools — November 4, 2026
+
+All 44 automated tests, TypeScript, production build and credential scan pass. New checks cover reversed/overlapping range selection, endpoint exclusions, grouped moves clamped at zero, source/spacing preservation, copy/paste identities and take detachment, paste bounds and tempo/subdivision snapping. Hosted browser verified numeric highlight selection, selecting three overlapping clips, copying/pasting the group, undo restoring original clips, selection loop 0–3 seconds, and 2× zoom. Used generated audio only. Deployment dpl_HMob1avVxyTHS3zTKH1kAWX7qnq4 is Ready in production.
+
+Ruler pointer-drag check also passed in the hosted studio: dragging across the ruler selected 0.5–2.5 seconds with beat snapping and retained the intersecting clip selection.

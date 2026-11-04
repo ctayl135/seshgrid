@@ -2,6 +2,15 @@
 import { useEffect, useRef, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { AudioEngine } from "@/lib/audio";
+import {
+  snapTime,
+  clipsInRange,
+  moveClips,
+  copyClips,
+  pasteClips,
+  type TimelineTool,
+  type ClipCopy,
+} from "@/lib/timeline-tools";
 import { convertAudio, EXPORT_FORMATS, type ExportFormat } from "@/lib/codecs";
 import {
   UNDERGROUND_PRESETS,
@@ -48,7 +57,6 @@ import { effectTail } from "@/lib/presets";
 import { useProjectEditor } from "./useProjectEditor";
 import { useSessionRecovery } from "./useSessionRecovery";
 import { loadRecovery } from "@/lib/recovery";
-const PX = 32;
 const clock = (n: number) =>
   `${Math.floor(n / 60)
     .toString()
@@ -71,6 +79,16 @@ export default function Studio({
   initialPreset?: string;
 } = {}) {
   const router = useRouter();
+  const [zoom, setZoom] = useState(32);
+  const PX = zoom;
+  const [tool, setTool] = useState<TimelineTool>("select"),
+    [snap, setSnap] = useState(1),
+    [range, setRange] = useState<[number, number]>([0, 0]),
+    [clipSelection, setClipSelection] = useState<string[]>([]),
+    [clipboard, setClipboard] = useState<ClipCopy[]>([]);
+  const rangeAnchor = useRef<number | null>(null),
+    clipDrag = useRef<{ x: number; ids: string[] } | null>(null),
+    suppressClipClick = useRef(false);
   const [exportFormat, setExportFormat] = useState<ExportFormat>("wav");
   const cloudMeta = useRef<{
     id: string;
@@ -83,6 +101,11 @@ export default function Studio({
   const editor = useProjectEditor(),
     project = editor.project,
     setProject = editor.reset;
+  useEffect(() => {
+    setClipSelection([]);
+    setRange([0, 0]);
+    setClipboard([]);
+  }, [project?.id]);
   const [selected, select] = useState<string>(""),
     [clipId, selectClip] = useState(""),
     [position, setPosition] = useState(0),
@@ -1209,10 +1232,259 @@ export default function Studio({
               </span>
             </div>
           </div>
+          <section
+            className="timeline-tools"
+            aria-label="Timeline editing tools"
+          >
+            <label>
+              Zoom
+              <select
+                aria-label="Timeline zoom"
+                value={zoom}
+                disabled={locked}
+                onChange={(e) => setZoom(Number(e.target.value))}
+              >
+                {[16, 32, 64, 128].map((z) => (
+                  <option key={z} value={z}>
+                    {z / 32}×
+                  </option>
+                ))}
+              </select>
+            </label>
+            {(
+              ["select", "move", "draw", "slice", "mute", "erase"] as const
+            ).map((t) => (
+              <button
+                key={t}
+                disabled={locked}
+                aria-pressed={tool === t}
+                onClick={() => setTool(t)}
+              >
+                {t === "select"
+                  ? "Highlight / Select"
+                  : t[0].toUpperCase() + t.slice(1)}
+              </button>
+            ))}
+            <label>
+              Snap
+              <select
+                aria-label="Timeline snap"
+                disabled={locked}
+                value={snap}
+                onChange={(e) => setSnap(Number(e.target.value))}
+              >
+                <option value={0}>Off</option>
+                <option value={1}>Beat</option>
+                <option value={2}>½ beat</option>
+                <option value={4}>¼ beat</option>
+              </select>
+            </label>
+            <label>
+              Range start
+              <input
+                aria-label="Selection start"
+                type="number"
+                min={0}
+                max={14400}
+                step={0.01}
+                disabled={locked}
+                value={range[0]}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  if (Number.isFinite(n) && n >= 0 && n <= 14400)
+                    setRange([n, range[1]]);
+                }}
+              />
+            </label>
+            <label>
+              Range end
+              <input
+                aria-label="Selection end"
+                type="number"
+                min={0}
+                max={14400}
+                step={0.01}
+                disabled={locked}
+                value={range[1]}
+                onChange={(e) => {
+                  const n = Number(e.target.value);
+                  if (Number.isFinite(n) && n >= 0 && n <= 14400)
+                    setRange([range[0], n]);
+                }}
+              />
+            </label>
+            <button
+              disabled={locked || range[0] === range[1]}
+              onClick={() => setClipSelection(clipsInRange(project, ...range))}
+            >
+              Select range clips
+            </button>
+            <button
+              disabled={locked || Math.abs(range[1] - range[0]) < 0.25}
+              onClick={() => {
+                setLoopStart(Math.min(...range));
+                setLoopEnd(Math.max(...range));
+                setLoopEnabled(true);
+                setPosition(Math.min(...range));
+              }}
+            >
+              Loop selection
+            </button>
+            <button
+              disabled={locked}
+              onClick={() =>
+                setClipSelection(
+                  project.tracks.flatMap((t) => t.clips.map((c) => c.id)),
+                )
+              }
+            >
+              Select all clips
+            </button>
+            <button
+              disabled={locked || !clipSelection.length}
+              onClick={() => setClipboard(copyClips(project, clipSelection))}
+            >
+              Copy selected
+            </button>
+            <button
+              disabled={locked || !clipSelection.length}
+              onClick={() => {
+                setClipboard(copyClips(project, clipSelection));
+                edit((p) => ({
+                  ...p,
+                  tracks: p.tracks.map((t) => ({
+                    ...t,
+                    clips: t.clips.filter((c) => !clipSelection.includes(c.id)),
+                  })),
+                }));
+                setClipSelection([]);
+                selectClip("");
+              }}
+            >
+              Cut selected
+            </button>
+            <button
+              disabled={locked || !clipboard.length}
+              onClick={() => {
+                try {
+                  edit((p) => pasteClips(p, clipboard, position));
+                } catch (e) {
+                  setError(
+                    e instanceof Error ? e.message : "Could not paste clips",
+                  );
+                }
+              }}
+            >
+              Paste at cursor
+            </button>
+            <button
+              disabled={locked || !clipSelection.length}
+              onClick={() =>
+                edit((p) => ({
+                  ...p,
+                  tracks: p.tracks.map((t) => ({
+                    ...t,
+                    clips: t.clips.map((c) =>
+                      clipSelection.includes(c.id)
+                        ? { ...c, muted: !c.muted }
+                        : c,
+                    ),
+                  })),
+                }))
+              }
+            >
+              Toggle selected mute
+            </button>
+            <button
+              disabled={locked || !clipSelection.length}
+              onClick={() => {
+                edit((p) => ({
+                  ...p,
+                  tracks: p.tracks.map((t) => ({
+                    ...t,
+                    clips: t.clips.filter((c) => !clipSelection.includes(c.id)),
+                  })),
+                }));
+                setClipSelection([]);
+                selectClip("");
+              }}
+            >
+              Delete selected
+            </button>
+            <button
+              disabled={locked}
+              onClick={() => {
+                setClipSelection([]);
+                setRange([0, 0]);
+              }}
+            >
+              Clear selection
+            </button>
+            <span>
+              {
+                clipSelection.filter((id) =>
+                  project.tracks.some((t) => t.clips.some((c) => c.id === id)),
+                ).length
+              }{" "}
+              clips selected
+            </span>
+            <p>
+              Drag the ruler to highlight time; Shift-click clips to add to
+              selection. Move drags selected clips together. Draw copies the
+              selected clip into a lane. Slice, mute and erase act on clicked
+              clips. Undo restores edits.
+            </p>
+          </section>
           <div className="timeline-scroll">
             <div style={{ width }} className="timeline">
+              {range[0] !== range[1] && (
+                <div
+                  className="timeline-highlight"
+                  style={{
+                    left: Math.min(...range) * PX,
+                    width: Math.abs(range[1] - range[0]) * PX,
+                  }}
+                />
+              )}
               <div
                 className="ruler"
+                onPointerDown={(e) => {
+                  if (locked || tool !== "select") return;
+                  const r = e.currentTarget.getBoundingClientRect();
+                  const time = snapTime(
+                    (e.clientX - r.left) / PX,
+                    project.bpm,
+                    snap,
+                  );
+                  rangeAnchor.current = time;
+                  setRange([time, time]);
+                  e.currentTarget.setPointerCapture(e.pointerId);
+                }}
+                onPointerMove={(e) => {
+                  if (rangeAnchor.current === null) return;
+                  const r = e.currentTarget.getBoundingClientRect();
+                  setRange([
+                    rangeAnchor.current,
+                    snapTime((e.clientX - r.left) / PX, project.bpm, snap),
+                  ]);
+                }}
+                onPointerUp={(e) => {
+                  if (rangeAnchor.current === null) return;
+                  const r = e.currentTarget.getBoundingClientRect(),
+                    end = snapTime(
+                      (e.clientX - r.left) / PX,
+                      project.bpm,
+                      snap,
+                    );
+                  setRange([rangeAnchor.current, end]);
+                  setClipSelection(
+                    clipsInRange(project, rangeAnchor.current, end),
+                  );
+                  rangeAnchor.current = null;
+                }}
+                onPointerCancel={() => {
+                  rangeAnchor.current = null;
+                }}
                 onClick={(e) => {
                   if (locked) return;
                   const rect = e.currentTarget.getBoundingClientRect();
@@ -1244,7 +1516,31 @@ export default function Studio({
                 <div
                   key={t.id}
                   className={`track-lane color-${i % 4} ${selected === t.id ? "selected" : ""}`}
-                  onClick={() => select(t.id)}
+                  onClick={(e) => {
+                    select(t.id);
+                    if (
+                      locked ||
+                      tool !== "draw" ||
+                      (e.target as HTMLElement).closest(".lane-label,button")
+                    )
+                      return;
+                    const original = copyClips(project, [clipId]);
+                    if (original.length) {
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      edit((p) =>
+                        pasteClips(
+                          p,
+                          original,
+                          snapTime(
+                            (e.clientX - rect.left) / PX,
+                            project.bpm,
+                            snap,
+                          ),
+                          t.id,
+                        ),
+                      );
+                    }
+                  }}
                 >
                   <div className="lane-label">
                     <span>{String(i + 1).padStart(2, "0")}</span>
@@ -1274,7 +1570,36 @@ export default function Studio({
                       key={c.id}
                       disabled={locked}
                       aria-label={`Select clip on ${t.name}`}
-                      className={`clip ${clipId === c.id ? "chosen" : ""} ${c.muted ? "muted-clip" : ""}`}
+                      className={`clip ${clipId === c.id || clipSelection.includes(c.id) ? "chosen" : ""} ${c.muted ? "muted-clip" : ""}`}
+                      onPointerDown={(e) => {
+                        if (locked || tool !== "move") return;
+                        e.stopPropagation();
+                        const ids = clipSelection.includes(c.id)
+                          ? clipSelection
+                          : [c.id];
+                        setClipSelection(ids);
+                        selectClip(c.id);
+                        clipDrag.current = { x: e.clientX, ids };
+                        suppressClipClick.current = false;
+                        e.currentTarget.setPointerCapture(e.pointerId);
+                      }}
+                      onPointerUp={(e) => {
+                        const drag = clipDrag.current;
+                        if (!drag) return;
+                        clipDrag.current = null;
+                        const raw = (e.clientX - drag.x) / PX;
+                        const delta = snap
+                          ? snapTime(Math.abs(raw), project.bpm, snap) *
+                            Math.sign(raw)
+                          : raw;
+                        if (Math.abs(raw) > 0.05) {
+                          edit((p) => moveClips(p, drag.ids, delta));
+                          suppressClipClick.current = true;
+                        }
+                      }}
+                      onPointerCancel={() => {
+                        clipDrag.current = null;
+                      }}
                       style={{
                         left: c.start * PX,
                         width: Math.max(4, c.duration * PX),
@@ -1283,6 +1608,49 @@ export default function Studio({
                         e.stopPropagation();
                         select(t.id);
                         selectClip(c.id);
+                        if (suppressClipClick.current) {
+                          suppressClipClick.current = false;
+                          return;
+                        }
+                        if (tool === "slice") {
+                          const r = e.currentTarget.getBoundingClientRect();
+                          const at = snapTime(
+                            c.start + (e.clientX - r.left) / PX,
+                            project.bpm,
+                            snap,
+                          );
+                          edit((p) => ({
+                            ...p,
+                            tracks: p.tracks.map((t) => ({
+                              ...t,
+                              clips: t.clips.flatMap((x) =>
+                                x.id === c.id ? splitClip(x, at) : [x],
+                              ),
+                            })),
+                          }));
+                          return;
+                        }
+                        if (tool === "mute") {
+                          patchClip(c.id, (x) => ({ ...x, muted: !x.muted }));
+                          return;
+                        }
+                        if (tool === "erase") {
+                          edit((p) => ({
+                            ...p,
+                            tracks: p.tracks.map((t) => ({
+                              ...t,
+                              clips: t.clips.filter((x) => x.id !== c.id),
+                            })),
+                          }));
+                          return;
+                        }
+                        setClipSelection((ids) =>
+                          e.shiftKey
+                            ? ids.includes(c.id)
+                              ? ids.filter((id) => id !== c.id)
+                              : [...ids, c.id]
+                            : [c.id],
+                        );
                       }}
                     >
                       <span>
