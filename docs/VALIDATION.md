@@ -161,3 +161,5 @@ Migration 010 adds member-only literal display-name/username discovery and sugge
 ## Follow notification delivery — November 4, 2026
 
 Migration 011 creates unread recipient notifications after new follow inserts; all follow entry points share this database trigger. The inbox supports safe follower-profile links and labels them View artist. Live three-account tests confirm exactly one notice for duplicate requests, correct follower name/link, unread state, and denial of actor/third-party reads. Existing privacy, follow, discovery, DM, beat, release and collaborative-save checks pass; generated accounts removed. Production build/TypeScript and client credential scan pass. Existing 15-second visible-page notification refresh applies; this does not add push/email notifications or historical backfill.
+
+Follow-notification correction: migration 012 backfills missing inbox entries for pre-trigger follows, preserving their original follow time and avoiding duplicates. Verified no existing follows remain without a recipient notification. This corrects the initial no-backfill limitation.
