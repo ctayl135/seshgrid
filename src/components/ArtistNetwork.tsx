@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import DiscoverArtists from "./DiscoverArtists";
 import { supabase } from "@/lib/storage";
 import type { ArtistProfile } from "@/lib/social";
 
@@ -18,6 +18,7 @@ export default function ArtistNetwork({
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [query, setQuery] = useState("");
+  const [networkRevision, setNetworkRevision] = useState(0);
   const generation = useRef(0),
     lock = useRef(false);
   useEffect(() => {
@@ -64,7 +65,7 @@ export default function ArtistNetwork({
     return () => {
       generation.current++;
     };
-  }, [viewer, artist]);
+  }, [viewer, artist, networkRevision]);
   const toggle = async () => {
     if (!supabase || lock.current) return;
     lock.current = true;
@@ -135,36 +136,10 @@ export default function ArtistNetwork({
         Save your artist profile to follow other creators. Your follows are
         visible to signed-in artists.
       </p>
-      <h3>Find artists</h3>
-      <label>
-        Search artist names
-        <input
-          aria-label="Search artists"
-          value={query}
-          maxLength={60}
-          onChange={(e) => setQuery(e.target.value)}
-        />
-      </label>
-      <div className="release-grid">
-        {people
-          .filter(
-            (p) =>
-              p.id !== viewer &&
-              p.display_name
-                .toLocaleLowerCase()
-                .includes(query.trim().toLocaleLowerCase()),
-          )
-          .map((p) => (
-            <article key={p.id}>
-              <Link href={"/profile?artist=" + p.id}>{p.display_name}</Link>
-              <p>{p.genre}</p>
-            </article>
-          ))}
-      </div>
-      <p>
-        Showing the 100 most recently updated profiles. Open an artist to listen
-        and follow.
-      </p>
+      <DiscoverArtists
+        viewer={viewer}
+        onChanged={() => setNetworkRevision((v) => v + 1)}
+      />
       {error && <p role="alert">{error}</p>}
     </section>
   );

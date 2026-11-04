@@ -153,3 +153,7 @@ Hosted browser verified library search plus Adlibs filtering, Boofpaxkmooky Drea
 ## Instant signup fix and profile onboarding — November 4, 2026
 
 Applied migration 009 and confirmed auth settings allow signup with mailer_autoconfirm=true. Live tests created two real signUp sessions, verified unique/editable usernames, website/profile updates, photo upload, cross-owner avatar upload denial and anonymous storage denial, then removed the fixtures. All previous 39 tests plus account validation pass, as do production build/TypeScript and credential scan. Browser signup from the deployed form reached /profile?welcome=1 immediately with artist name populated. Invalid image decoding is rejected before upload. Production dpl_9MF1ps4YS5X6JZLgvRhxVdyBwqa2 is Ready at the public NOIR account link.
+
+## Artist search and suggested accounts — November 4, 2026
+
+Migration 010 adds member-only literal display-name/username discovery and suggestions excluding self and existing follows. UI provides searchable account cards, profile photos/initials, usernames, direct follow/unfollow, loading and empty states, and genre-prioritized suggestions. All 40 tests, production build and credential scan pass. Live checks cover username search, literal punctuation, anonymous denial, suggestion limits/self-exclusion and the existing privacy/follow/community matrix. Generated integration-test users were removed. Hosted browser checked For You account search using the existing demo artist.

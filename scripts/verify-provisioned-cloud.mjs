@@ -253,25 +253,53 @@ try {
     );
   stage = "artist-follows";
   const follow = { follower_id: accounts[0].id, artist_id: accounts[1].id };
+  const discoveryHandle = "qa_" + randomBytes(6).toString("hex");
   assert.equal(
     (
-      await studio
-        .from("artist_follows")
-        .upsert(follow, {
-          onConflict: "follower_id,artist_id",
-          ignoreDuplicates: true,
-        })
+      await secondClient
+        .from("artist_profiles")
+        .update({ username: discoveryHandle })
+        .eq("id", accounts[1].id)
+    ).error,
+    null,
+  );
+  const search = await studio.rpc("discover_artists", {
+    search_text: discoveryHandle,
+    suggestions: false,
+  });
+  assert.equal(search.error, null);
+  assert.equal(search.data.length, 1);
+  assert.equal(search.data[0].id, accounts[1].id);
+  const injection = await studio.rpc("discover_artists", {
+    search_text: "%,()",
+    suggestions: false,
+  });
+  assert.equal(injection.error, null);
+  assert.equal(injection.data.length, 0);
+  assert.ok(
+    (
+      await anonymous.rpc("discover_artists", {
+        search_text: "",
+        suggestions: true,
+      })
+    ).error,
+    "Anonymous discovery denied",
+  );
+  assert.equal(
+    (
+      await studio.from("artist_follows").upsert(follow, {
+        onConflict: "follower_id,artist_id",
+        ignoreDuplicates: true,
+      })
     ).error,
     null,
   );
   assert.equal(
     (
-      await studio
-        .from("artist_follows")
-        .upsert(follow, {
-          onConflict: "follower_id,artist_id",
-          ignoreDuplicates: true,
-        })
+      await studio.from("artist_follows").upsert(follow, {
+        onConflict: "follower_id,artist_id",
+        ignoreDuplicates: true,
+      })
     ).error,
     null,
   );
@@ -337,8 +365,15 @@ try {
     ).count,
     0,
   );
+  const suggestions = await studio.rpc("discover_artists", {
+    search_text: "",
+    suggestions: true,
+  });
+  assert.equal(suggestions.error, null);
+  assert.ok(suggestions.data.every((p) => p.id !== accounts[0].id));
+  assert.ok(suggestions.data.length <= 6);
   console.log(
-    "Live artist follow checks passed: counts, duplicate safety, unfollow, self-follow and impersonation denial, anonymous denial and cross-account delete denial.",
+    "Live artist follow/discovery checks passed: username search, literal search safety, suggested limits/self-exclusion, counts, duplicate safety and follow privacy.",
   );
   await community.sendMessage(
     accounts[0].id,

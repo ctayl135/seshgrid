@@ -199,3 +199,7 @@ Two user-requested sample accounts, NOIR Demo Artist and NOIR Demo Producer, rem
 Public instant email/password signup is now enabled at /account, with email confirmation off at the owner's explicit request. Email addresses are unverified during early access; account sessions and all private project policies remain enforced. Home/community links now lead to the account page. The studio also links to the new flow and distinguishes instant sessions from confirmation-required responses.
 
 Migration 009 adds unique editable usernames, private avatar storage and optional HTTPS website links. Profiles include name, username, bio, genre, picture and next-step links. Photos accept JPG/PNG/WebP under 2 MB, up to 4096 pixels per dimension, decoded before upload. Database/storage policies restrict profile edits and avatar writes to the account owner; members can view profile pictures through signed links. Set Confirm email back on and configure SMTP when moving to verified email onboarding.
+
+## Artist search and suggestions
+
+For You and Profile include Find your people: search all artist names or @usernames (up to 50 matches), open their page, or follow/unfollow directly. Suggested accounts show up to six artists you do not follow, excluding yourself and prioritizing your genre. Results use the account-protected discover_artists function (migration 010); search text is matched literally, not inserted into database filter syntax. Following refreshes suggestions and your count. Signed-out visitors can create an account to join discovery.
