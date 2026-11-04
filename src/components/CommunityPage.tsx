@@ -620,12 +620,15 @@ export default function CommunityPage({
                         <Link
                           href={
                             n.link.startsWith("/messages?artist=") ||
-                            n.link.startsWith("/studio?project=")
+                            n.link.startsWith("/studio?project=") ||
+                            /^\/profile\?artist=[a-f0-9-]{36}$/.test(n.link)
                               ? n.link
                               : "/sessions"
                           }
                         >
-                          Open update ↗
+                          {n.link.startsWith("/profile?artist=")
+                            ? "View artist ↗"
+                            : "Open update ↗"}
                         </Link>
                       )
                     )}
@@ -634,8 +637,8 @@ export default function CommunityPage({
               })}
               {!notificationRows.length && (
                 <p>
-                  You’re all caught up. Invitations and message notifications
-                  will appear here.
+                  You’re all caught up. Follows, invitations and message
+                  notifications will appear here.
                 </p>
               )}
             </section>

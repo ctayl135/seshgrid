@@ -157,3 +157,7 @@ Applied migration 009 and confirmed auth settings allow signup with mailer_autoc
 ## Artist search and suggested accounts — November 4, 2026
 
 Migration 010 adds member-only literal display-name/username discovery and suggestions excluding self and existing follows. UI provides searchable account cards, profile photos/initials, usernames, direct follow/unfollow, loading and empty states, and genre-prioritized suggestions. All 40 tests, production build and credential scan pass. Live checks cover username search, literal punctuation, anonymous denial, suggestion limits/self-exclusion and the existing privacy/follow/community matrix. Generated integration-test users were removed. Hosted browser checked For You account search using the existing demo artist.
+
+## Follow notification delivery — November 4, 2026
+
+Migration 011 creates unread recipient notifications after new follow inserts; all follow entry points share this database trigger. The inbox supports safe follower-profile links and labels them View artist. Live three-account tests confirm exactly one notice for duplicate requests, correct follower name/link, unread state, and denial of actor/third-party reads. Existing privacy, follow, discovery, DM, beat, release and collaborative-save checks pass; generated accounts removed. Production build/TypeScript and client credential scan pass. Existing 15-second visible-page notification refresh applies; this does not add push/email notifications or historical backfill.

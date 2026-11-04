@@ -320,6 +320,33 @@ try {
     ).error,
     "Follower impersonation denied",
   );
+  const followNotice = await secondClient
+    .from("notifications")
+    .select("*")
+    .eq("link", "/profile?artist=" + accounts[0].id);
+  assert.equal(followNotice.error, null);
+  assert.equal(
+    followNotice.data.length,
+    1,
+    "Duplicate follows do not duplicate notifications",
+  );
+  assert.equal(followNotice.data[0].read_at, null);
+  assert.ok(
+    followNotice.data[0].title.includes(
+      "Temporary Noir Artist started following you",
+    ),
+  );
+  for (const c of [studio, thirdClient])
+    assert.equal(
+      (
+        await c
+          .from("notifications")
+          .select("id")
+          .eq("id", followNotice.data[0].id)
+      ).data.length,
+      0,
+      "Only recipient reads follow notification",
+    );
   assert.ok(
     (
       await studio

@@ -203,3 +203,7 @@ Migration 009 adds unique editable usernames, private avatar storage and optiona
 ## Artist search and suggestions
 
 For You and Profile include Find your people: search all artist names or @usernames (up to 50 matches), open their page, or follow/unfollow directly. Suggested accounts show up to six artists you do not follow, excluding yourself and prioritizing your genre. Results use the account-protected discover_artists function (migration 010); search text is matched literally, not inserted into database filter syntax. Following refreshes suggestions and your count. Signed-out visitors can create an account to join discovery.
+
+## Follow notifications
+
+New follows create an unread notification for the followed artist, naming the follower and linking to their profile. Duplicate follow requests do not create duplicate notifications. Existing inbox polling/unread badges and Mark all read apply; only the recipient can read their notifications. Historical follows are not backfilled. Migration 011 installs the database trigger so every follow entry point behaves consistently.
