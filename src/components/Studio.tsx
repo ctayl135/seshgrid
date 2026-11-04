@@ -87,8 +87,14 @@ export default function Studio({
     [clipSelection, setClipSelection] = useState<string[]>([]),
     [clipboard, setClipboard] = useState<ClipCopy[]>([]);
   const rangeAnchor = useRef<number | null>(null),
-    clipDrag = useRef<{ x: number; ids: string[] } | null>(null),
+    clipDrag = useRef<{ x: number; ids: string[]; scroll: number } | null>(
+      null,
+    ),
     suppressClipClick = useRef(false);
+  const [dragPreview, setDragPreview] = useState<{
+    ids: string[];
+    delta: number;
+  } | null>(null);
   const [selectionMenu, setSelectionMenu] = useState<{
     x: number;
     y: number;
@@ -1746,22 +1752,73 @@ export default function Studio({
                       aria-label={`Select clip on ${t.name}`}
                       className={`clip ${clipId === c.id || clipSelection.includes(c.id) ? "chosen" : ""} ${c.muted ? "muted-clip" : ""}`}
                       onPointerDown={(e) => {
-                        if (locked || tool !== "move") return;
+                        if (
+                          locked ||
+                          e.shiftKey ||
+                          (tool !== "move" && tool !== "select")
+                        )
+                          return;
                         e.stopPropagation();
+                        setSelectionMenu(null);
                         const ids = clipSelection.includes(c.id)
                           ? clipSelection
                           : [c.id];
                         setClipSelection(ids);
                         selectClip(c.id);
-                        clipDrag.current = { x: e.clientX, ids };
+                        clipDrag.current = {
+                          x: e.clientX,
+                          ids,
+                          scroll:
+                            e.currentTarget.closest(".timeline-scroll")
+                              ?.scrollLeft ?? 0,
+                        };
                         suppressClipClick.current = false;
                         e.currentTarget.setPointerCapture(e.pointerId);
+                      }}
+                      onPointerMove={(e) => {
+                        const drag = clipDrag.current;
+                        if (!drag) return;
+                        const scroll =
+                          e.currentTarget.closest(".timeline-scroll");
+                        if (scroll) {
+                          const r = scroll.getBoundingClientRect();
+                          if (e.clientX > r.right - 35) scroll.scrollLeft += 18;
+                          else if (e.clientX < r.left + 35)
+                            scroll.scrollLeft -= 18;
+                        }
+                        const raw =
+                          (e.clientX -
+                            drag.x +
+                            ((scroll?.scrollLeft ?? 0) - drag.scroll)) /
+                          PX;
+                        const delta = snap
+                          ? snapTime(Math.abs(raw), project.bpm, snap) *
+                            Math.sign(raw)
+                          : raw;
+                        const clips = project.tracks
+                          .flatMap((t) => t.clips)
+                          .filter((c) => drag.ids.includes(c.id));
+                        const bounded = Math.max(
+                          -Math.min(...clips.map((c) => c.start)),
+                          Math.min(
+                            delta,
+                            14400 - Math.max(...clips.map((c) => c.start)),
+                          ),
+                        );
+                        setDragPreview({ ids: drag.ids, delta: bounded });
                       }}
                       onPointerUp={(e) => {
                         const drag = clipDrag.current;
                         if (!drag) return;
                         clipDrag.current = null;
-                        const raw = (e.clientX - drag.x) / PX;
+                        setDragPreview(null);
+                        const raw =
+                          (e.clientX -
+                            drag.x +
+                            ((e.currentTarget.closest(".timeline-scroll")
+                              ?.scrollLeft ?? 0) -
+                              drag.scroll)) /
+                          PX;
                         const delta = snap
                           ? snapTime(Math.abs(raw), project.bpm, snap) *
                             Math.sign(raw)
@@ -1773,9 +1830,21 @@ export default function Studio({
                       }}
                       onPointerCancel={() => {
                         clipDrag.current = null;
+                        setDragPreview(null);
                       }}
                       style={{
-                        left: c.start * PX,
+                        left:
+                          (c.start +
+                            (dragPreview?.ids.includes(c.id)
+                              ? dragPreview.delta
+                              : 0)) *
+                          PX,
+                        cursor:
+                          tool === "select" || tool === "move"
+                            ? dragPreview
+                              ? "grabbing"
+                              : "grab"
+                            : undefined,
                         width: Math.max(4, c.duration * PX),
                       }}
                       onClick={(e) => {

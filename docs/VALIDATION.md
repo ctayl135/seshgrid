@@ -179,3 +179,7 @@ Ruler pointer-drag check also passed in the hosted studio: dragging across the r
 ## Highlight mini menu — November 4, 2026
 
 The range pointer-up gesture opens a viewport-bounded Selection actions popup with Copy, Cut, Paste at selection start, Loop selection, mute/unmute, delete and six tool modes. Escape/outside-click/close dismiss it; right-click reopens it. Hosted generated-audio test passed: highlight selects three clips and opens menu; Copy closes it; highlighting empty time enables Paste at selection start; paste inserts the copied group at four seconds; Undo restores original arrangement. Build/TypeScript and credential scan pass. Production dpl_6FQzzynBCdrpRSHKtE1sVL2rK5Y4 is Ready.
+
+## Direct highlighted-clip dragging — November 4, 2026
+
+Highlight / Select now supports direct clip dragging with a visual group preview and edge scrolling, using existing snapped/clamped move logic. One drop creates one undo entry; cancelled gestures discard the preview. Browser test passed with three selected generated clips: dragging 64 pixels moved start times from 0/0.5/0.5 seconds to 2/2.5/2.5 seconds while Highlight remained active; one Undo restored the original arrangement. Build/TypeScript and client credential scan pass. Production dpl_9aZic16Yh9zcRcmsfBFuefwQWoj8 is Ready.
