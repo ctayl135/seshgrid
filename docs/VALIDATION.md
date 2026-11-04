@@ -175,3 +175,7 @@ Hosted studio verification also passed: imported a generated portable session, s
 All 44 automated tests, TypeScript, production build and credential scan pass. New checks cover reversed/overlapping range selection, endpoint exclusions, grouped moves clamped at zero, source/spacing preservation, copy/paste identities and take detachment, paste bounds and tempo/subdivision snapping. Hosted browser verified numeric highlight selection, selecting three overlapping clips, copying/pasting the group, undo restoring original clips, selection loop 0–3 seconds, and 2× zoom. Used generated audio only. Deployment dpl_HMob1avVxyTHS3zTKH1kAWX7qnq4 is Ready in production.
 
 Ruler pointer-drag check also passed in the hosted studio: dragging across the ruler selected 0.5–2.5 seconds with beat snapping and retained the intersecting clip selection.
+
+## Highlight mini menu — November 4, 2026
+
+The range pointer-up gesture opens a viewport-bounded Selection actions popup with Copy, Cut, Paste at selection start, Loop selection, mute/unmute, delete and six tool modes. Escape/outside-click/close dismiss it; right-click reopens it. Hosted generated-audio test passed: highlight selects three clips and opens menu; Copy closes it; highlighting empty time enables Paste at selection start; paste inserts the copied group at four seconds; Undo restores original arrangement. Build/TypeScript and credential scan pass. Production dpl_6FQzzynBCdrpRSHKtE1sVL2rK5Y4 is Ready.

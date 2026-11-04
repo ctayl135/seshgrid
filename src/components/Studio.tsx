@@ -89,6 +89,27 @@ export default function Studio({
   const rangeAnchor = useRef<number | null>(null),
     clipDrag = useRef<{ x: number; ids: string[] } | null>(null),
     suppressClipClick = useRef(false);
+  const [selectionMenu, setSelectionMenu] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const selectionMenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!selectionMenu) return;
+    const outside = (e: PointerEvent) => {
+      if (!selectionMenuRef.current?.contains(e.target as Node))
+        setSelectionMenu(null);
+    };
+    const escape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSelectionMenu(null);
+    };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [selectionMenu]);
   const [exportFormat, setExportFormat] = useState<ExportFormat>("wav");
   const cloudMeta = useRef<{
     id: string;
@@ -1435,7 +1456,149 @@ export default function Studio({
               clips. Undo restores edits.
             </p>
           </section>
-          <div className="timeline-scroll">
+          {selectionMenu && !locked && (
+            <div
+              ref={selectionMenuRef}
+              className="selection-menu"
+              role="dialog"
+              aria-label="Selection actions"
+              style={{ left: selectionMenu.x, top: selectionMenu.y }}
+            >
+              <div>
+                <strong>{clipSelection.length} clips selected</strong>
+                <button
+                  aria-label="Close selection menu"
+                  onClick={() => setSelectionMenu(null)}
+                >
+                  ×
+                </button>
+              </div>
+              <button
+                disabled={!clipSelection.length}
+                onClick={() => {
+                  setClipboard(copyClips(project, clipSelection));
+                  setSelectionMenu(null);
+                }}
+              >
+                Copy
+              </button>
+              <button
+                disabled={!clipSelection.length}
+                onClick={() => {
+                  setClipboard(copyClips(project, clipSelection));
+                  edit((p) => ({
+                    ...p,
+                    tracks: p.tracks.map((t) => ({
+                      ...t,
+                      clips: t.clips.filter(
+                        (c) => !clipSelection.includes(c.id),
+                      ),
+                    })),
+                  }));
+                  setClipSelection([]);
+                  selectClip("");
+                  setSelectionMenu(null);
+                }}
+              >
+                Cut
+              </button>
+              <button
+                disabled={!clipboard.length}
+                onClick={() => {
+                  try {
+                    edit((p) => pasteClips(p, clipboard, Math.min(...range)));
+                    setSelectionMenu(null);
+                  } catch (e) {
+                    setError(
+                      e instanceof Error ? e.message : "Could not paste clips",
+                    );
+                  }
+                }}
+              >
+                Paste at selection start
+              </button>
+              <button
+                disabled={Math.abs(range[1] - range[0]) < 0.25}
+                onClick={() => {
+                  setLoopStart(Math.min(...range));
+                  setLoopEnd(Math.max(...range));
+                  setLoopEnabled(true);
+                  setPosition(Math.min(...range));
+                  setSelectionMenu(null);
+                }}
+              >
+                Loop selection
+              </button>
+              <button
+                disabled={!clipSelection.length}
+                onClick={() => {
+                  edit((p) => ({
+                    ...p,
+                    tracks: p.tracks.map((t) => ({
+                      ...t,
+                      clips: t.clips.map((c) =>
+                        clipSelection.includes(c.id)
+                          ? { ...c, muted: !c.muted }
+                          : c,
+                      ),
+                    })),
+                  }));
+                  setSelectionMenu(null);
+                }}
+              >
+                Mute / unmute selected
+              </button>
+              <button
+                disabled={!clipSelection.length}
+                onClick={() => {
+                  edit((p) => ({
+                    ...p,
+                    tracks: p.tracks.map((t) => ({
+                      ...t,
+                      clips: t.clips.filter(
+                        (c) => !clipSelection.includes(c.id),
+                      ),
+                    })),
+                  }));
+                  setClipSelection([]);
+                  selectClip("");
+                  setSelectionMenu(null);
+                }}
+              >
+                Delete selected
+              </button>
+              <small>Choose a tool</small>
+              <div className="selection-tool-grid">
+                {(
+                  ["select", "move", "draw", "slice", "mute", "erase"] as const
+                ).map((t) => (
+                  <button
+                    key={t}
+                    aria-pressed={tool === t}
+                    onClick={() => {
+                      setTool(t);
+                      setSelectionMenu(null);
+                    }}
+                  >
+                    {t === "select"
+                      ? "Highlight"
+                      : t[0].toUpperCase() + t.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div
+            className="timeline-scroll"
+            onContextMenu={(e) => {
+              if (locked || !clipSelection.length) return;
+              e.preventDefault();
+              setSelectionMenu({
+                x: Math.max(8, Math.min(e.clientX, window.innerWidth - 230)),
+                y: Math.max(8, Math.min(e.clientY, window.innerHeight - 430)),
+              });
+            }}
+          >
             <div style={{ width }} className="timeline">
               {range[0] !== range[1] && (
                 <div
@@ -1477,6 +1640,17 @@ export default function Studio({
                       snap,
                     );
                   setRange([rangeAnchor.current, end]);
+                  if (Math.abs(end - rangeAnchor.current) > 0.001)
+                    setSelectionMenu({
+                      x: Math.max(
+                        8,
+                        Math.min(e.clientX, window.innerWidth - 230),
+                      ),
+                      y: Math.max(
+                        8,
+                        Math.min(e.clientY + 8, window.innerHeight - 430),
+                      ),
+                    });
                   setClipSelection(
                     clipsInRange(project, rangeAnchor.current, end),
                   );
