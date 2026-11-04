@@ -104,3 +104,5 @@ Deployment dpl_HRf4T1eViHCMHu8wX26EFHvEdUxU is Ready. Both the existing private 
 - All 28 tests, TypeScript, production build and browser credential scan pass.
 - Browser checks passed for Home → Sessions, opening an existing saved source/preset project, New session creating a blank studio, saving a new named session with its own reopen URL, refresh/navigation, and the Open project backup shortcut entering the project importer. Existing project storage identifiers and source files remain unchanged.
 - Session cards combine local and signed-in cloud projects and retain recovery entries. Cloud authorization remains enforced by the existing owner policies. Studio route changes do not publish or share projects.
+
+Private deployment dpl_4fwg1bQJWd5esvnRsSQF8PZdV3Mg is Ready and assigned to both existing test addresses. Hosted Home and Sessions navigation, saved-project visibility and recovery-draft visibility passed. The app name is NOIR; browser storage stays at its existing origins.
