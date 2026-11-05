@@ -44,6 +44,8 @@ import { packSession, unpackSession } from "@/lib/portable";
 import Waveform from "./Waveform";
 import VocalRack from "./VocalRack";
 import BeatRack from "./BeatRack";
+import BeatLevels from "./BeatLevels";
+import { normalizedTrackClips } from "@/lib/track-normalize";
 import StockRack from "./StockRack";
 import AutoKey from "./AutoKey";
 import { detectTempo } from "@/lib/tempo-detection";
@@ -60,7 +62,7 @@ import MicrophoneInput from "./MicrophoneInput";
 import VoiceCheck from "./VoiceCheck";
 import { vocalRecordingLevel } from "@/lib/voice-input";
 import { stockPlugins } from "@/lib/stock-plugins";
-import { effectTail } from "@/lib/presets";
+import { effectTail, DRY_EFFECTS } from "@/lib/presets";
 import { useProjectEditor } from "./useProjectEditor";
 import { useSessionRecovery } from "./useSessionRecovery";
 import { loadRecovery } from "@/lib/recovery";
@@ -1237,6 +1239,32 @@ export default function Studio({
           recording. Loop auditions playback only; recording stays linear.
         </small>
       </section>
+      <BeatLevels
+        tracks={project.tracks}
+        volumeDisabled={
+          busy || readOnly || (playing && loopEnabled && !recording)
+        }
+        editDisabled={locked}
+        onGain={(id, gain) => patchTrack(id, { gain })}
+        onNormalize={(id) =>
+          run(async () => {
+            const beat = project.tracks.find((t) => t.id === id)!;
+            patchTrack(id, {
+              clips: normalizedTrackClips(beat, engine.current!.buffers),
+            });
+            setMessage(
+              "Beat normalized toward −1 dBFS. Use Beat volume to balance it against your voice. Source audio is unchanged.",
+            );
+          })
+        }
+        onReset={(id) => {
+          const beat = project.tracks.find((t) => t.id === id)!;
+          patchTrack(id, {
+            clips: beat.clips.map((c) => ({ ...c, level: undefined })),
+          });
+          setMessage("Beat normalization reset.");
+        }}
+      />
       <section className="recording-tools" aria-label="Recording setup">
         <label className="voice-assist-toggle">
           <input
@@ -2594,6 +2622,25 @@ export default function Studio({
                   }
                 >
                   Balance vocal volume
+                </button>
+              )}
+              {track.role !== "beat" && (
+                <button
+                  disabled={locked}
+                  onClick={() => {
+                    patchTrack(track.id, {
+                      low: 0,
+                      high: 0,
+                      reverb: 0,
+                      fx: { ...DRY_EFFECTS },
+                      plugins: stockPlugins(),
+                    });
+                    setMessage(
+                      "Dry vocal playback: pitch, drive, crusher and other effects removed. Undo restores your sound. If crackle remains, it may be in the recording itself.",
+                    );
+                  }}
+                >
+                  Dry vocal · remove effects
                 </button>
               )}
               <AutoKey

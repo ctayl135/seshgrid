@@ -94,3 +94,15 @@ test("high boost softly limits peaks without producing clipped or invalid PCM", 
   assert.ok(messages[0].samples![0] > 0.8);
   assert.ok(messages[0].samples![1] < -0.8);
 });
+test("headset capture keeps a stable channel when channel energies alternate", () => {
+  const { recorder, messages } = processor();
+  recorder.port.onmessage({ data: { startFrame: 0 } });
+  recorder.process([
+    [new Float32Array(128).fill(0.25), new Float32Array(128).fill(-0.24)],
+  ]);
+  recorder.process([
+    [new Float32Array(128).fill(0.25), new Float32Array(128).fill(-0.26)],
+  ]);
+  recorder.port.onmessage({ data: "stop" });
+  assert.ok(messages[0].samples!.every((x) => x === 0.25));
+});

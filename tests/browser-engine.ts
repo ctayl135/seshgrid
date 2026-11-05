@@ -61,7 +61,12 @@ button.onclick = async () => {
       metronome: true,
     });
     capture.start(when);
-    await new Promise((resolve) => setTimeout(resolve, 1600));
+    const captureDeadline = performance.now() + 10000;
+    while (
+      context.currentTime < when + 1 &&
+      performance.now() < captureDeadline
+    )
+      await new Promise((r) => setTimeout(r, 50));
     check(
       capture.peak() > 0.09 && capture.peak() < 0.11,
       "Input meter does not measure raw microphone signal",
@@ -79,7 +84,8 @@ button.onclick = async () => {
         samples.reduce((sum, n) => sum + n * n, 0) / samples.length,
       );
     check(
-      expectedCaptureDuration > 0.75 && Math.abs(recorded.duration - expectedCaptureDuration) < 0.1,
+      expectedCaptureDuration > 0.75 &&
+        Math.abs(recorded.duration - expectedCaptureDuration) < 0.1,
       `Captured take duration ${recorded.duration} is not aligned with scheduled start (${expectedCaptureDuration})`,
     );
     check(
@@ -103,6 +109,14 @@ button.onclick = async () => {
       engine.peak() > 0.04 && engine.peak() < 0.06,
       "Mix meter does not measure post-fader signal",
     );
+    track.gain = 0.25;
+    engine.update(project);
+    await new Promise((r) => setTimeout(r, 250));
+    check(
+      engine.peak() > 0.02 && engine.peak() < 0.03,
+      "Live gain change did not lower playback volume",
+    );
+    track.gain = 0.5;
     engine.stop();
     check(
       engine.peak() === 0 && capture.peak() === 0,
@@ -159,7 +173,7 @@ button.onclick = async () => {
     }
     // Verify real alternating echo positions independently of preset tonal changes.
     const hit = context.createBuffer(1, 4410, 44100);
-    hit.getChannelData(0)[0] = 0.2;
+    hit.getChannelData(0)[441] = 0.2; // After the 3ms anti-click fade.
     const hitId = crypto.randomUUID();
     engine.buffers.set(hitId, hit);
     const echo = newTrack("Echo routing");
@@ -192,11 +206,11 @@ button.onclick = async () => {
         )
         .reduce((m, v) => Math.max(m, Math.abs(v)), 0);
     check(
-      windowPeak(0, 0.05) > 0.04 && windowPeak(1, 0.05) < 0.001,
+      windowPeak(0, 0.06) > 0.04 && windowPeak(1, 0.06) < 0.001,
       `First echo is not isolated left (L=${windowPeak(0, 0.05)}, R=${windowPeak(1, 0.05)}, rate=${echoes.sampleRate})`,
     );
     check(
-      windowPeak(1, 0.1) > 0.015 && windowPeak(0, 0.1) < 0.001,
+      windowPeak(1, 0.11) > 0.015 && windowPeak(0, 0.11) < 0.001,
       "Second echo is not isolated right",
     );
     const stereo = context.createBuffer(2, 4410, 44100);
@@ -383,6 +397,46 @@ button.onclick = async () => {
     check(
       !engine.looping && engine.peak() === 0,
       "Loop stop did not release transport and meters",
+    );
+    const safety = context.createBuffer(1, 44100, 44100);
+    safety.getChannelData(0).fill(0.8);
+    const safetyId = crypto.randomUUID();
+    engine.buffers.set(safetyId, safety);
+    const hot = newTrack("Loud vocal");
+    hot.pan = 1;
+    hot.gain = 2;
+    hot.clips = [
+      {
+        id: crypto.randomUUID(),
+        assetId: safetyId,
+        start: 0,
+        offset: 0,
+        duration: 1,
+      },
+    ];
+    project.tracks = [hot, { ...hot, id: crypto.randomUUID() }];
+    const protectedMix = await context.decodeAudioData(
+      await (await engine.export(project)).arrayBuffer(),
+    );
+    const loudPeak = protectedMix
+      .getChannelData(1)
+      .reduce((p, x) => Math.max(p, Math.abs(x)), 0);
+    check(
+      loudPeak <= 0.981 && loudPeak > 0.9,
+      "Overloaded mix is not protected",
+    );
+    check(
+      Math.abs(protectedMix.getChannelData(1)[0]) < 0.001,
+      "Clip onset still has an abrupt step",
+    );
+    hot.gain = 0.25;
+    project.tracks = [hot];
+    const quietMix = await context.decodeAudioData(
+      await (await engine.export(project)).arrayBuffer(),
+    );
+    check(
+      Math.abs(quietMix.getChannelData(1)[22050] - 0.2) < 0.002,
+      "Output protection changed normal levels",
     );
     status.textContent = `PASS — actual AudioWorklet capture → PCM WAV → decode → offline mix/export. Take: ${recorded.duration.toFixed(3)}s; RMS: ${rms.toFixed(4)}. All eight vocal/adlib presets changed rendered audio with finite samples. Ping-pong echoes alternate left/right at the expected times. Legacy mono/stereo levels are preserved with effects bypassed. Input selection, input metering, stereo mix metering and stopped-node cleanup passed. Two songs automatically advanced using actual audio completion events. Non-destructive clip normalization reached the expected rendered peak. Count-in capture, muted takes, Pitch Lock export and continuous loop wrap/stop passed. No microphone used.`;
     status.dataset.passed = "true";

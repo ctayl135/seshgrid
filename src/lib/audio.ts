@@ -1,4 +1,5 @@
 import { stockPlugins, processStock } from "./stock-plugins";
+import { protectedOutput } from "./audio-safety";
 import { TransportClicks } from "./transport-clicks";
 import { samplePeak } from "./meter";
 import { audible, projectEnd, type Project, type Track } from "./model";
@@ -234,6 +235,7 @@ export class AudioEngine {
   private channels = new Map<string, ReturnType<typeof channel>>();
   private analysers: AnalyserNode[] = [];
   private master?: GainNode;
+  private outputNodes: AudioNode[] = [];
   private meterSplit?: ChannelSplitterNode;
   private meterSamples?: Float32Array<ArrayBuffer>;
   private prepared = new Map<string, AudioBuffer>();
@@ -270,6 +272,8 @@ export class AudioEngine {
     this.analysers.forEach((a) => a.disconnect());
     this.analysers = [];
     this.master?.disconnect();
+    this.outputNodes.forEach((n) => n.disconnect());
+    this.outputNodes = [];
     this.meterSplit?.disconnect();
     this.master = undefined;
     this.meterSplit = undefined;
@@ -434,7 +438,7 @@ export class AudioEngine {
     const source = ctx.createBufferSource();
     source.buffer = rendered;
     source.loop = true;
-    source.connect(this.liveDestination(ctx));
+    source.connect(this.liveDestination(ctx, false));
     this.sources.push(source);
     this.started = ctx.currentTime + 0.1;
     this.position = from;
@@ -446,9 +450,13 @@ export class AudioEngine {
     }
     return this.started;
   }
-  private liveDestination(ctx: AudioContext) {
+  private liveDestination(ctx: AudioContext, protect = true) {
     this.master = ctx.createGain();
-    this.master.connect(ctx.destination);
+    if (protect) {
+      const output = protectedOutput(ctx, ctx.destination);
+      this.outputNodes = output.nodes;
+      this.master.connect(output.input);
+    } else this.master.connect(ctx.destination);
     this.meterSplit = ctx.createChannelSplitter(2);
     this.master.connect(this.meterSplit);
     this.analysers = [ctx.createAnalyser(), ctx.createAnalyser()];
@@ -477,6 +485,7 @@ export class AudioEngine {
   ) {
     let destination: AudioNode = ctx.destination;
     if (live) destination = this.liveDestination(ctx as AudioContext);
+    else destination = protectedOutput(ctx, ctx.destination).input;
     const room = impulse(ctx),
       plan: {
         source: AudioBufferSourceNode;
@@ -524,7 +533,13 @@ export class AudioEngine {
         const s = ctx.createBufferSource();
         s.buffer = b;
         const clipGain = ctx.createGain();
-        clipGain.gain.value = clip.level ?? 1;
+        const start = when + Math.max(0, clip.start - from),
+          fade = Math.min(0.003, duration / 2),
+          level = clip.level ?? 1;
+        clipGain.gain.setValueAtTime(0, start);
+        clipGain.gain.linearRampToValueAtTime(level, start + fade);
+        clipGain.gain.setValueAtTime(level, start + duration - fade);
+        clipGain.gain.linearRampToValueAtTime(0, start + duration);
         s.connect(clipGain).connect(c.input);
         c.nodes.push(clipGain);
         plan.push({

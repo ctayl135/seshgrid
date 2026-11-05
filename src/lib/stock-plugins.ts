@@ -270,10 +270,15 @@ export async function processStock(
     center += targets[frame];
     if (Math.floor(center) % 131072 < targets[frame]) await yieldUI();
   }
+  let blend = 0;
+  const transition = 1 - Math.exp(-1 / (rate * 0.003));
   for (let i = 0; i < length; i++) {
     const frame = Math.min(periods.length - 1, Math.floor(i / hop));
-    if (weights[i] > 0.0001 && periods[frame])
-      for (let c = 0; c < out.length; c++) out[c][i] = sums[c][i] / weights[i];
+    blend += ((periods[frame] ? 1 : 0) - blend) * transition;
+    const mix = blend * Math.min(1, weights[i] / 0.25);
+    if (weights[i] > 0.0001)
+      for (let c = 0; c < out.length; c++)
+        out[c][i] = out[c][i] * (1 - mix) + (sums[c][i] / weights[i]) * mix;
   }
   return colorAudio(out, rate, p);
 }
