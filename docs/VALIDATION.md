@@ -206,3 +206,5 @@ Headphone boost follow-up: 58 tests passed. A synthetic -42 dBFS microphone sign
 
 
 Headphone cleanup: 59 automated tests and production build passed. Optional noise-suppression constraints preserve selected microphone, automatic gain preference and disabled echo cancellation. Existing takes are unchanged. Actual static reduction on the user's wired iPhone headset still needs listening confirmation; no claim of universal noise removal.
+
+Auto BPM: 64 tests passed, including 60–200 BPM synthetic pulses, 44.1/48 kHz browser-rate regressions, silence/sustained-tone rejection, silent intro/stereo handling, independent detected/manual BPM persistence and validation. Browser WAV upload detected 140 BPM; manual edit to 135 persisted after importing a 90 BPM beat; Use detected, half/double and 390px layout passed. Analysis bounded to three 30-second windows; no audio upload to an analysis service. Audio tempo-estimation background: https://essentia.upf.edu/tutorial_rhythm_beatdetection.html . No Essentia dependency or implementation code included.

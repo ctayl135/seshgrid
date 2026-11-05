@@ -2290,3 +2290,4 @@ input:not([type=range]):not([type=checkbox]),select,textarea{font-size:16px;max-
 .voice-check>summary{min-height:44px;padding:10px 0;cursor:pointer;font-weight:600}
 
 .mic-boost-control{width:100%;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.mic-boost-control label{display:grid;gap:8px;flex:1;min-width:180px}.mic-boost-control small{width:100%;line-height:1.6;color:#aaa}.mic-check-playback{display:grid;gap:10px;margin-top:16px;padding:12px;border:1px solid #555;border-radius:8px}.mic-check-playback audio{width:100%}
+.studio-page .tempo{display:flex;flex-wrap:wrap;gap:10px}.tempo-actions{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.tempo-actions small{font-size:11px;color:#bbb;max-width:230px;overflow-wrap:anywhere}.studio-page .tempo .number-field{font-size:11px;gap:4px}.studio-page .tempo input{border:1px solid #555;padding:6px;min-height:44px;width:85px}

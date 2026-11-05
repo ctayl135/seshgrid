@@ -16,6 +16,7 @@ export type Track = {
   id: string;
   name: string;
   role?: "beat" | "vocal" | "adlib";
+  detectedBpm?: number;
   gain: number;
   pan: number;
   mute: boolean;
@@ -112,6 +113,7 @@ export function validateProject(value: unknown): Project {
       ids.has(t.id) ||
       typeof t.name !== "string" ||
       (t.role !== undefined && !["beat", "vocal", "adlib"].includes(t.role)) ||
+      (t.detectedBpm !== undefined && !finite(t.detectedBpm, 30, 300)) ||
       !finite(t.gain, 0, 2) ||
       !finite(t.pan, -1, 1) ||
       !finite(t.low, -12, 12) ||

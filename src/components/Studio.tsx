@@ -46,6 +46,8 @@ import VocalRack from "./VocalRack";
 import BeatRack from "./BeatRack";
 import StockRack from "./StockRack";
 import AutoKey from "./AutoKey";
+import { detectTempo } from "@/lib/tempo-detection";
+import TempoControl from "./TempoControl";
 import PublishPanel from "./PublishPanel";
 import InvitePanel from "./InvitePanel";
 import { beatSession } from "@/lib/community";
@@ -421,6 +423,18 @@ export default function Studio({
           );
         const t = newTrack(file.name.replace(/\.[^.]+$/, ""));
         t.role = "beat";
+        setMessage("Finding BPM for " + file.name + "…");
+        try {
+          const estimate = await detectTempo(
+            Array.from({ length: buffer.numberOfChannels }, (_, i) =>
+              buffer.getChannelData(i),
+            ),
+            buffer.sampleRate,
+          );
+          if (estimate) t.detectedBpm = estimate.bpm;
+        } catch {
+          /* An uncertain analysis must never prevent importing audio. */
+        }
         t.clips = [
           {
             id: crypto.randomUUID(),
@@ -434,9 +448,23 @@ export default function Studio({
         added.push(t);
       }
       staged.forEach((a) => assets.current.set(a.id, a.blob));
-      edit((p) => ({ ...p, tracks: [...p.tracks, ...added] }));
+      const firstTempo = added.find(
+        (t) => t.detectedBpm !== undefined,
+      )?.detectedBpm;
+      const autoTempo =
+        !project!.tracks.some((t) => t.role === "beat") &&
+        firstTempo !== undefined;
+      edit((p) => ({
+        ...p,
+        bpm: autoTempo ? firstTempo! : p.bpm,
+        tracks: [...p.tracks, ...added],
+      }));
       if (added.length) select(added[0].id);
-      setMessage("Audio imported. Select a track to mix or record.");
+      setMessage(
+        firstTempo !== undefined
+          ? `Beat detected at approximately ${firstTempo} BPM. ${autoTempo ? "Session tempo updated." : "Existing session tempo kept; use the detected BPM button to change it."} Tempo is editable; half/double-time can also fit a beat.`
+          : "Audio imported. No steady BPM detected; set the tempo manually.",
+      );
       if (fileInput.current) fileInput.current.value = "";
     });
   const startRecording = () =>
@@ -1066,10 +1094,44 @@ export default function Studio({
         </div>
         <output className="time">{clock(position)}</output>
         <div className="tempo">
-          {numberField("TEMPO", project.bpm, 30, 300, 1, (bpm) =>
-            edit((p) => ({ ...p, bpm })),
-          )}
-          <span>4 / 4</span>
+          <TempoControl
+            value={project.bpm}
+            disabled={locked}
+            onChange={(bpm) => edit((p) => ({ ...p, bpm }), "project:bpm")}
+          />
+          <div className="tempo-actions">
+            <button
+              disabled={locked || project.bpm / 2 < 30}
+              onClick={() =>
+                edit((p) => ({ ...p, bpm: Math.round((p.bpm / 2) * 10) / 10 }))
+              }
+            >
+              ½ BPM
+            </button>
+            <button
+              disabled={locked || project.bpm * 2 > 300}
+              onClick={() =>
+                edit((p) => ({ ...p, bpm: Math.round(p.bpm * 2 * 10) / 10 }))
+              }
+            >
+              2× BPM
+            </button>
+            {track?.detectedBpm !== undefined && (
+              <>
+                <small>
+                  Detected ≈ {track.detectedBpm} BPM · {track.name}
+                </small>
+                <button
+                  disabled={locked}
+                  onClick={() =>
+                    edit((p) => ({ ...p, bpm: track.detectedBpm! }))
+                  }
+                >
+                  Use detected BPM
+                </button>
+              </>
+            )}
+          </div>
         </div>
         <div className="transport-note">
           <span className={recording ? "red-dot" : "green-dot"} />
@@ -2212,6 +2274,7 @@ export default function Studio({
                   <p>Upload your instrumental, then record a vocal take.</p>
                   <button
                     className="primary"
+                    disabled={locked}
                     onClick={() => fileInput.current?.click()}
                   >
                     Upload your first track
