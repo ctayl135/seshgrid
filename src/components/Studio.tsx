@@ -173,6 +173,7 @@ export default function Studio({
   const [microphoneId, setMicrophoneId] = useState("");
   const [voiceAssist, setVoiceAssist] = useState(true);
   const [inputBoostDb, setInputBoostDb] = useState(0);
+  const [noiseCleanup, setNoiseCleanup] = useState(false);
   const readInputPeak = useRef(
     () => recorder.current?.capture.peak() ?? 0,
   ).current;
@@ -462,6 +463,7 @@ export default function Studio({
           microphoneId,
           voiceAssist,
           inputBoostDb,
+          noiseCleanup,
         );
         let track = project!.tracks.find(
           (t) => t.id === armed && t.role !== "beat",
@@ -1212,7 +1214,22 @@ export default function Studio({
             background noise. Run a voice check and listen before recording.
           </small>
         </div>
+        <label className="voice-assist-toggle">
+          <input
+            type="checkbox"
+            checked={noiseCleanup}
+            disabled={locked}
+            onChange={(e) => setNoiseCleanup(e.target.checked)}
+          />{" "}
+          Headphone noise cleanup
+        </label>
+        <p className="voice-assist-hint">
+          Reduces background hiss on browsers that support microphone noise
+          reduction. It may soften your voice. Compare mic checks with it on and
+          off; new recordings only.
+        </p>
         <VoiceCheck
+          noiseCleanup={noiseCleanup}
           boostDb={inputBoostDb}
           deviceId={microphoneId}
           assist={voiceAssist}

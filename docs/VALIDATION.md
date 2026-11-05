@@ -204,3 +204,5 @@ Voice/headset recording: 56 automated tests passed, including strongest-channel 
 
 Headphone boost follow-up: 58 tests passed. A synthetic -42 dBFS microphone signal passed through the real voice-check AudioWorklet with +18 dB boost; the UI reported -24.0 dBFS input, and the decoded playback sample measured -6 dBFS after level assist. Unit coverage checks boosted recording/meter consistency, preserved source input arrays, and bounded high peaks. Actual wired iPhone headset playback still requires user verification.
 
+
+Headphone cleanup: 59 automated tests and production build passed. Optional noise-suppression constraints preserve selected microphone, automatic gain preference and disabled echo cancellation. Existing takes are unchanged. Actual static reduction on the user's wired iPhone headset still needs listening confirmation; no claim of universal noise removal.

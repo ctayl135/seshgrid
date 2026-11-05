@@ -7,6 +7,7 @@ import { encodeWav } from "@/lib/wav";
 export default function VoiceCheck({
   deviceId,
   boostDb = 0,
+  noiseCleanup = false,
   assist,
   disabled,
   onBusy,
@@ -14,6 +15,7 @@ export default function VoiceCheck({
 }: {
   deviceId: string;
   boostDb?: number;
+  noiseCleanup?: boolean;
   assist: boolean;
   disabled: boolean;
   onBusy: (active: boolean) => void;
@@ -31,6 +33,7 @@ export default function VoiceCheck({
       peak: 0,
       boost: 0,
       assisted: false,
+      cleanup: false,
     }),
     [result, setResult] = useState<KeyAnalysis | null>(null);
   const previewRef = useRef("");
@@ -81,7 +84,12 @@ export default function VoiceCheck({
         }),
       );
       setPreviewUrl(previewRef.current);
-      setCheckStats({ peak: level.peak, boost: boostDb, assisted: assist });
+      setCheckStats({
+        peak: level.peak,
+        boost: boostDb,
+        assisted: assist,
+        cleanup: noiseCleanup,
+      });
       const found = await detectKey(
         [buffer.getChannelData(0)],
         buffer.sampleRate,
@@ -146,6 +154,7 @@ export default function VoiceCheck({
               deviceId,
               assist,
               boostDb,
+              noiseCleanup,
             );
             if (token !== generation.current) return;
             capture.start(ctx.currentTime);
@@ -238,6 +247,11 @@ export default function VoiceCheck({
               ? "Playback includes vocal level assist."
               : "Playback uses the recorded level."}
           </p>
+          <small>
+            {checkStats.cleanup
+              ? "Headphone noise cleanup was requested for this check. "
+              : "Headphone noise cleanup was off for this check. "}
+          </small>
           <small>
             If it is still quiet, increase Mic boost and check again. If it
             sounds distorted, reduce boost. If this input stays very quiet,

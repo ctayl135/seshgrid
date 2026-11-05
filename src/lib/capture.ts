@@ -22,6 +22,7 @@ export class MicrophoneCapture {
     deviceId = "",
     voiceAssist = true,
     inputBoostDb = 0,
+    noiseCleanup = false,
   ) {
     if (!navigator.mediaDevices?.getUserMedia || !window.AudioWorkletNode)
       throw new Error(
@@ -30,7 +31,7 @@ export class MicrophoneCapture {
     try {
       let timedOut = false;
       const request = navigator.mediaDevices.getUserMedia(
-        microphoneConstraints(deviceId, voiceAssist),
+        microphoneConstraints(deviceId, voiceAssist, noiseCleanup),
       );
       void request.then(
         (stream) => {

@@ -12,13 +12,14 @@ export function vocalRecordingLevel(samples: Float32Array, assist = true) {
 export function microphoneConstraints(
   deviceId = "",
   voiceAssist = true,
+  noiseCleanup = false,
 ): MediaStreamConstraints {
   return {
     audio: {
       ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
       channelCount: { ideal: 1 },
       echoCancellation: false,
-      noiseSuppression: false,
+      noiseSuppression: noiseCleanup,
       autoGainControl: voiceAssist,
     },
     video: false,
