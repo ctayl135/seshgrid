@@ -5,7 +5,7 @@ import { readFileSync } from "node:fs";
 function processor() {
   let Constructor: new () => {
     port: { onmessage: (e: { data: unknown }) => void };
-    process: (inputs: Float32Array[][]) => boolean;
+    process: (inputs: Float32Array[][], outputs?: Float32Array[][]) => boolean;
   };
   const messages: { samples?: Float32Array; done?: boolean }[] = [];
   class Base {
@@ -67,4 +67,30 @@ test("headset silent and inverted channels do not attenuate or cancel vocals", (
     recorder.port.onmessage({ data: "stop" });
     assert.ok(messages[0].samples!.every((x) => x === 0.25));
   }
+});
+
+test("headphone boost raises captured PCM and the live meter path by the selected dB", () => {
+  const { recorder, messages } = processor(),
+    input = new Float32Array(128).fill(Math.pow(10, -42 / 20)),
+    output = new Float32Array(128);
+  recorder.port.onmessage({ data: { inputBoostDb: 18 } });
+  recorder.process([[input]], [[output]]);
+  assert.ok(Math.abs(20 * Math.log10(output[0]) + 24) < 0.001);
+  recorder.port.onmessage({ data: { startFrame: 0 } });
+  recorder.process([[input]], [[output]]);
+  recorder.port.onmessage({ data: "stop" });
+  assert.ok(Math.abs(messages[0].samples![0] - output[0]) < 1e-7);
+  assert.ok(Math.abs(20 * Math.log10(input[0]) + 42) < 0.001);
+});
+test("high boost softly limits peaks without producing clipped or invalid PCM", () => {
+  const { recorder, messages } = processor();
+  recorder.port.onmessage({ data: { inputBoostDb: 30 } });
+  recorder.port.onmessage({ data: { startFrame: 0 } });
+  recorder.process([[new Float32Array([0.2, -0.2, 0.9, -0.9])]]);
+  recorder.port.onmessage({ data: "stop" });
+  assert.ok(
+    messages[0].samples!.every((x) => Number.isFinite(x) && Math.abs(x) <= 1),
+  );
+  assert.ok(messages[0].samples![0] > 0.8);
+  assert.ok(messages[0].samples![1] < -0.8);
 });

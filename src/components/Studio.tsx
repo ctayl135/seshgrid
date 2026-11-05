@@ -172,6 +172,7 @@ export default function Studio({
     [loopEnd, setLoopEnd] = useState(8);
   const [microphoneId, setMicrophoneId] = useState("");
   const [voiceAssist, setVoiceAssist] = useState(true);
+  const [inputBoostDb, setInputBoostDb] = useState(0);
   const readInputPeak = useRef(
     () => recorder.current?.capture.peak() ?? 0,
   ).current;
@@ -460,6 +461,7 @@ export default function Studio({
           },
           microphoneId,
           voiceAssist,
+          inputBoostDb,
         );
         let track = project!.tracks.find(
           (t) => t.id === armed && t.role !== "beat",
@@ -1185,7 +1187,33 @@ export default function Studio({
           Helps quiet phone/headphone takes reach a usable volume. Original
           audio stays intact. Keep the beat below your voice in Mix & effects.
         </p>
+        <div className="mic-boost-control">
+          <label>
+            Mic boost: +{inputBoostDb} dB
+            <input
+              aria-label="Microphone boost"
+              type="range"
+              min={0}
+              max={30}
+              step={3}
+              value={inputBoostDb}
+              disabled={locked}
+              onChange={(e) => setInputBoostDb(Number(e.target.value))}
+            />
+          </label>
+          <button disabled={locked} onClick={() => setInputBoostDb(18)}>
+            Quiet headphones: +18 dB
+          </button>
+          <button disabled={locked} onClick={() => setInputBoostDb(0)}>
+            No boost
+          </button>
+          <small>
+            Raises the recorded mic level and its meter. High boost also raises
+            background noise. Run a voice check and listen before recording.
+          </small>
+        </div>
         <VoiceCheck
+          boostDb={inputBoostDb}
           deviceId={microphoneId}
           assist={voiceAssist}
           disabled={busy || recording || playing || readOnly}

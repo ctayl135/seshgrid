@@ -17,7 +17,12 @@ export class MicrophoneCapture {
   private result?: Promise<Blob>;
   private stopRequested = false;
   constructor(private context: AudioContext) {}
-  async prepare(onInterrupted: () => void, deviceId = "", voiceAssist = true) {
+  async prepare(
+    onInterrupted: () => void,
+    deviceId = "",
+    voiceAssist = true,
+    inputBoostDb = 0,
+  ) {
     if (!navigator.mediaDevices?.getUserMedia || !window.AudioWorkletNode)
       throw new Error(
         "Recording requires a modern browser on HTTPS or localhost.",
@@ -59,6 +64,12 @@ export class MicrophoneCapture {
       if (this.disposed) throw new Error("Microphone check cancelled.");
       this.node = new AudioWorkletNode(this.context, "seshgrid-recorder", {
         outputChannelCount: [1],
+      });
+      this.node.port.postMessage({
+        inputBoostDb: Math.max(
+          0,
+          Math.min(30, Number.isFinite(inputBoostDb) ? inputBoostDb : 0),
+        ),
       });
       this.source = this.context.createMediaStreamSource(this.stream);
       this.analyser = this.context.createAnalyser();

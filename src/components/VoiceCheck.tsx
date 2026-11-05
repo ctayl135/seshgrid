@@ -2,15 +2,18 @@
 import { useEffect, useRef, useState } from "react";
 import { MicrophoneCapture } from "@/lib/capture";
 import { detectKey, KEY_NAMES, type KeyAnalysis } from "@/lib/key-detection";
-import { voiceNote } from "@/lib/voice-input";
+import { voiceNote, vocalRecordingLevel } from "@/lib/voice-input";
+import { encodeWav } from "@/lib/wav";
 export default function VoiceCheck({
   deviceId,
+  boostDb = 0,
   assist,
   disabled,
   onBusy,
   onApply,
 }: {
   deviceId: string;
+  boostDb?: number;
   assist: boolean;
   disabled: boolean;
   onBusy: (active: boolean) => void;
@@ -23,7 +26,14 @@ export default function VoiceCheck({
     [reading, setReading] = useState({ peak: 0, hz: 0 }),
     [seconds, setSeconds] = useState(8),
     [input, setInput] = useState(""),
+    [previewUrl, setPreviewUrl] = useState(""),
+    [checkStats, setCheckStats] = useState({
+      peak: 0,
+      boost: 0,
+      assisted: false,
+    }),
     [result, setResult] = useState<KeyAnalysis | null>(null);
+  const previewRef = useRef("");
   const active = useRef<{
       capture: MicrophoneCapture;
       ctx: AudioContext;
@@ -42,6 +52,7 @@ export default function VoiceCheck({
       generation.current++;
       clean();
       onBusy(false);
+      if (previewRef.current) URL.revokeObjectURL(previewRef.current);
     },
     [onBusy],
   );
@@ -56,6 +67,21 @@ export default function VoiceCheck({
     try {
       const blob = await capture.stop();
       const buffer = await ctx.decodeAudioData(await blob.arrayBuffer());
+      if (token !== generation.current) return;
+      const samples = buffer.getChannelData(0),
+        level = vocalRecordingLevel(samples, assist);
+      const playback = Float32Array.from(
+        samples,
+        (sample) => sample * level.level,
+      );
+      if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+      previewRef.current = URL.createObjectURL(
+        new Blob([encodeWav([playback], buffer.sampleRate)], {
+          type: "audio/wav",
+        }),
+      );
+      setPreviewUrl(previewRef.current);
+      setCheckStats({ peak: level.peak, boost: boostDb, assisted: assist });
       const found = await detectKey(
         [buffer.getChannelData(0)],
         buffer.sampleRate,
@@ -102,6 +128,9 @@ export default function VoiceCheck({
           onBusy(true);
           setPhase("preparing");
           setResult(null);
+          if (previewRef.current) URL.revokeObjectURL(previewRef.current);
+          previewRef.current = "";
+          setPreviewUrl("");
           setMessage("Allow microphone access if asked…");
           setReading({ peak: 0, hz: 0 });
           setSeconds(8);
@@ -116,6 +145,7 @@ export default function VoiceCheck({
               },
               deviceId,
               assist,
+              boostDb,
             );
             if (token !== generation.current) return;
             capture.start(ctx.currentTime);
@@ -189,6 +219,32 @@ export default function VoiceCheck({
           </span>
         </div>
       )}
+      {previewUrl && (
+        <div className="mic-check-playback">
+          <strong>Listen to your mic check</strong>
+          <audio
+            aria-label="Microphone check playback"
+            controls
+            preload="metadata"
+            src={previewUrl}
+          />
+          <p>
+            Recorded at +{checkStats.boost} dB boost. Input peak:{" "}
+            {checkStats.peak
+              ? (20 * Math.log10(checkStats.peak)).toFixed(1)
+              : "below −60"}{" "}
+            dBFS.{" "}
+            {checkStats.assisted
+              ? "Playback includes vocal level assist."
+              : "Playback uses the recorded level."}
+          </p>
+          <small>
+            If it is still quiet, increase Mic boost and check again. If it
+            sounds distorted, reduce boost. If this input stays very quiet,
+            unplug the headphones and compare the iPhone microphone.
+          </small>
+        </div>
+      )}
       <p role="status">{message}</p>
       {result && (
         <div className="key-results">
@@ -207,7 +263,8 @@ export default function VoiceCheck({
       <small>
         Spoken rap may not contain enough sung notes to identify a key. This
         estimates musical pitch, not another plugin’s exact settings. The check
-        is discarded; record a take to save your performance.
+        stays on this device until you check again or leave the studio; record a
+        take to save your performance.
       </small>
     </details>
   );

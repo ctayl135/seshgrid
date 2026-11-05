@@ -2,10 +2,16 @@ class PCMRecorder extends AudioWorkletProcessor {
   constructor(options) {
     super();
     this.startFrame = Infinity;
+    this.gain = 1;
     this.chunk = new Float32Array(4096);
     this.used = 0;
     this.active = true;
     this.port.onmessage = (e) => {
+      if (Number.isFinite(e.data?.inputBoostDb))
+        this.gain = Math.pow(
+          10,
+          Math.max(0, Math.min(30, e.data.inputBoostDb)) / 20,
+        );
       if (typeof e.data?.startFrame === "number")
         this.startFrame = e.data.startFrame;
       if (e.data === "stop") {
@@ -37,7 +43,11 @@ class PCMRecorder extends AudioWorkletProcessor {
       }
     }
     for (let i = 0; i < channel.length; i++) {
-      const sample = channel[i];
+      let sample = channel[i] * this.gain;
+      if (this.gain > 1 && Math.abs(sample) > 0.8)
+        sample =
+          Math.sign(sample) *
+          (0.8 + 0.2 * Math.tanh((Math.abs(sample) - 0.8) / 0.2));
       if (outputs[0]?.[0]) outputs[0][0][i] = sample;
       if (currentFrame + i < this.startFrame) continue;
       this.chunk[this.used++] = sample;

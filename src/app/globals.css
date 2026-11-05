@@ -2288,3 +2288,5 @@ input:not([type=range]):not([type=checkbox]),select,textarea{font-size:16px;max-
 
 .voice-check{width:100%;padding:14px;border:1px solid #555;border-radius:10px;background:#151515}.voice-check h3{margin:0}.voice-check button{margin:4px}.voice-check small{display:block;color:#aaa;line-height:1.6}.voice-reading{display:grid;gap:10px;padding:12px 0}.voice-reading meter{width:100%}.voice-assist-toggle{display:flex;align-items:center;gap:8px}.voice-assist-toggle input{width:20px;height:20px}.voice-assist-hint{flex-basis:100%;margin:0}
 .voice-check>summary{min-height:44px;padding:10px 0;cursor:pointer;font-weight:600}
+
+.mic-boost-control{width:100%;display:flex;flex-wrap:wrap;gap:8px;align-items:center}.mic-boost-control label{display:grid;gap:8px;flex:1;min-width:180px}.mic-boost-control small{width:100%;line-height:1.6;color:#aaa}.mic-check-playback{display:grid;gap:10px;margin-top:16px;padding:12px;border:1px solid #555;border-radius:8px}.mic-check-playback audio{width:100%}
