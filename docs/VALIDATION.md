@@ -193,3 +193,5 @@ All 46 tests, TypeScript, production build and credential scan pass. Tests cover
 Replaced interface color accents, tracks, waveform strokes and motion curves with grayscale values; established black backgrounds and white primary/selected controls. Added an original vector N/music-note mark for navigation and favicon. Production build/TypeScript and client credential scan pass. Hosted home screenshot confirms readable black/white controls, waveform artwork and logo. No recording, account or storage behavior changed. Production dpl_Hyo6JAnDaFR1yH9qugxHcxuQAq26 is Ready.
 
 Phone layout: checked 390px studio Record/Edit/Mix/Setup switches, new vocal track selection and 320px home/FYP navigation without page overflow. Save/Projects stay visible; More reveals remaining actions. Production build passes. Physical phone microphone capture was not repeated for this layout-only change.
+
+Unified layout: phone navigation and the Record/Edit/Mix/Setup workflow now apply at every screen width. Checked desktop More/Setup controls in-browser; production build passes.

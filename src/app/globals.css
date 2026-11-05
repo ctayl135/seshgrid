@@ -742,7 +742,7 @@ footer > span:last-child {
     width: 800px;
   }
 }
-@media (max-width: 1100px) {
+@media all {
   .transport-note {
     display: none;
   }
@@ -773,7 +773,7 @@ footer > span:last-child {
     min-width: 130px;
   }
 }
-@media (max-width: 760px) {
+@media all {
   header {
     height: auto;
     min-height: 112px;
@@ -983,7 +983,7 @@ footer > span:last-child {
   line-height: 1.7;
   color: #7e7e7e;
 }
-@media (max-width: 760px) {
+@media all {
   .vocal-rack {
     max-width: 550px;
     margin: 0 18px 20px;
@@ -1072,7 +1072,7 @@ footer > span:last-child {
   border-color: #636363;
   background: #303030;
 }
-@media (max-width: 760px) {
+@media all {
   .arrangement-tools {
     gap: 8px;
   }
@@ -1163,7 +1163,7 @@ footer > span:last-child {
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
-@media (max-width: 800px) {
+@media all {
   .recording-tools {
     align-items: flex-start;
     flex-direction: column;
@@ -1286,7 +1286,7 @@ footer > span:last-child {
 .playlist-error {
   color: #b3b3b3;
 }
-@media (max-width: 800px) {
+@media all {
   .project-library {
     grid-template-columns: 1fr;
   }
@@ -1496,7 +1496,7 @@ header {
   width: auto;
   flex: none;
 }
-@media (max-width: 700px) {
+@media all {
   .social-page {
     padding: 20px;
   }
@@ -1841,7 +1841,7 @@ select {
   outline: 2px solid #e3e3e3;
   outline-offset: 4px;
 }
-@media (max-width: 800px) {
+@media all {
   .noir-home {
     padding: 0 20px 30px;
   }
@@ -1886,7 +1886,7 @@ select {
     margin-left: 0;
   }
 }
-@media (max-width: 500px) {
+@media all {
   .session-card-grid,
   .home-destinations {
     grid-template-columns: 1fr;
@@ -2064,7 +2064,7 @@ select {
 .community-page .release-grid {
   margin-bottom: 25px;
 }
-@media (max-width: 800px) {
+@media all {
   .dm-layout {
     grid-template-columns: 1fr;
   }
@@ -2206,7 +2206,7 @@ select {
   opacity: 0.33;
   filter: grayscale(0.8);
 }
-@media (max-width: 700px) {
+@media all {
   .recording-workflow {
     padding: 12px 16px;
   }
@@ -2237,9 +2237,9 @@ input[type=range],input[type=checkbox]{accent-color:#ededed}
 .timeline-tools button[aria-pressed=true]{border-color:#fff;color:#fff}
 .motion-clip{background:#454545!important;border-color:#eee!important;color:#fff!important}
 
-/* Phone workflow: one workspace at a time, with transport always in reach. */
+/* Shared phone and computer workflow: one workspace at a time. */
 .mobile-studio-tabs{display:none}
-@media(max-width:760px){
+@media all{
 button,a,input,select,textarea{touch-action:manipulation}
 button,select,.home-tabs a,.home-account,.social-nav a{min-height:44px}
 input:not([type=range]):not([type=checkbox]),select,textarea{font-size:16px;max-width:100%}
@@ -2265,7 +2265,7 @@ input:not([type=range]):not([type=checkbox]),select,textarea{font-size:16px;max-
 }
 
 .mobile-menu-toggle,.mobile-record-label{display:none}
-@media(max-width:760px){
+@media all{
 .studio-page .header-actions{flex-wrap:wrap;overflow:visible}
 .studio-page .header-actions:not(.mobile-menu-open)>:not(.mobile-menu-toggle):not(.session-shortcut):not(.save-shortcut){display:none}
 .mobile-menu-toggle{display:block;order:3}.session-shortcut{order:-2}.save-shortcut{order:-3}
@@ -2273,4 +2273,7 @@ input:not([type=range]):not([type=checkbox]),select,textarea{font-size:16px;max-
 .studio-page .transport-buttons .record{width:auto;min-width:95px;padding:0 10px;color:#fff;border-color:#aaa;font-size:18px}
 .mobile-view-record .microphone-input>button{display:none}
 }
-@media(max-width:760px){.mobile-view-setup .tempo{display:flex}.studio-page .transport:has(.record.active) .transport-note{display:flex;flex-basis:100%;color:#fff}}
+@media all{.mobile-view-setup .tempo{display:flex}.studio-page .transport:has(.record.active) .transport-note{display:flex;flex-basis:100%;color:#fff}}
+
+/* Keep the same single-column workflow on every screen. */
+.studio-page .mixer{max-height:none;overflow-y:visible}
