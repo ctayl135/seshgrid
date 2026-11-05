@@ -80,6 +80,8 @@ export default function Studio({
   initialPreset?: string;
 } = {}) {
   const router = useRouter();
+  const [mobileMenu, setMobileMenu] = useState(false);
+  const [mobileView, setMobileView] = useState("record");
   const [zoom, setZoom] = useState(32);
   const PX = zoom;
   const [tool, setTool] = useState<TimelineTool>("select"),
@@ -772,7 +774,7 @@ export default function Studio({
     </label>
   );
   return (
-    <main>
+    <main className={`studio-page mobile-view-${mobileView}`}>
       <input
         ref={projectInput}
         type="file"
@@ -818,7 +820,8 @@ export default function Studio({
               : "Ready to create"}
           </span>
         </div>
-        <div className="header-actions">
+        <div className={`header-actions ${mobileMenu ? "mobile-menu-open" : ""}`}>
+          <button className="mobile-menu-toggle" aria-expanded={mobileMenu} onClick={() => setMobileMenu(!mobileMenu)}>{mobileMenu ? "Less" : "More"}</button>
           <Link
             className="nav-link"
             href="/"
@@ -865,7 +868,7 @@ export default function Studio({
           >
             Publish
           </button>
-          <button disabled={locked} onClick={openProjects}>
+          <button className="session-shortcut" disabled={locked} onClick={openProjects}>
             Projects
           </button>
           <button
@@ -881,7 +884,7 @@ export default function Studio({
           >
             Backup
           </button>
-          <button disabled={locked || !project.name.trim()} onClick={save}>
+          <button className="save-shortcut" disabled={locked || !project.name.trim()} onClick={save}>
             Save{dirty ? " •" : ""}
           </button>
           <select
@@ -938,6 +941,11 @@ export default function Studio({
           require editor access from the owner.
         </div>
       )}
+      <nav className="mobile-studio-tabs" aria-label="Studio sections">
+        {[["record", "Record"], ["edit", "Edit tracks"], ["mix", "Mix & effects"], ["setup", "Setup"]].map(([id, label]) => (
+          <button key={id} aria-pressed={mobileView === id} onClick={() => setMobileView(id)}>{label}</button>
+        ))}
+      </nav>
       <section className="transport" aria-label="Transport">
         <div className="transport-buttons">
           <button
@@ -989,7 +997,7 @@ export default function Studio({
             disabled={busy || readOnly}
             onClick={recording ? stopRecording : startRecording}
           >
-            {recording ? "■" : "●"}
+            {recording ? "■" : "●"}<span className="mobile-record-label">{recording ? "Stop" : "Record"}</span>
           </button>
         </div>
         <output className="time">{clock(position)}</output>
