@@ -2277,3 +2277,9 @@ input:not([type=range]):not([type=checkbox]),select,textarea{font-size:16px;max-
 
 /* Keep the same single-column workflow on every screen. */
 .studio-page .mixer{max-height:none;overflow-y:visible}
+
+/* Drag the playhead without moving clips or selecting ruler text. */
+.playhead-handle{position:absolute;top:0;left:-14px;width:28px;height:36px;min-height:0;padding:0;border:0;border-radius:0;background:transparent;pointer-events:auto;touch-action:none;cursor:ew-resize}
+.playhead-handle:hover:not(:disabled){background:#ffffff20}
+.playhead .playhead-handle i{left:8px;top:0;width:12px;height:16px;pointer-events:none}
+.playhead-handle:disabled{pointer-events:none}

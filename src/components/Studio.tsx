@@ -89,6 +89,7 @@ export default function Studio({
     [range, setRange] = useState<[number, number]>([0, 0]),
     [clipSelection, setClipSelection] = useState<string[]>([]),
     [clipboard, setClipboard] = useState<ClipCopy[]>([]);
+  const playheadDragging = useRef(false);
   const rangeAnchor = useRef<number | null>(null),
     clipDrag = useRef<{ x: number; ids: string[]; scroll: number } | null>(
       null,
@@ -1730,7 +1731,45 @@ export default function Studio({
                 )}
               </div>
               <div className="playhead" style={{ left: position * PX }}>
-                <i />
+                <button
+                  className="playhead-handle"
+                  aria-label="Song position"
+                  title="Drag to move the song position. Playback pauses while moving."
+                  disabled={recording || busy}
+                  onPointerDown={(e) => {
+                    if (e.button !== 0 || recordFlag.current || busy) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    stop();
+                    setSelectionMenu(null);
+                    playheadDragging.current = true;
+                    e.currentTarget.setPointerCapture(e.pointerId);
+                  }}
+                  onPointerMove={(e) => {
+                    if (!playheadDragging.current) return;
+                    const timeline = e.currentTarget.closest(".timeline");
+                    const scroll = timeline?.parentElement;
+                    if (!timeline || !scroll) return;
+                    const edge = scroll.getBoundingClientRect();
+                    if (e.clientX > edge.right - 28) scroll.scrollLeft += 18;
+                    else if (e.clientX < edge.left + 28) scroll.scrollLeft -= 18;
+                    const rect = timeline.getBoundingClientRect();
+                    setPosition(Math.max(0, Math.min(width / PX, 14400, (e.clientX - rect.left) / PX)));
+                  }}
+                  onPointerUp={(e) => {
+                    playheadDragging.current = false;
+                    if (e.currentTarget.hasPointerCapture(e.pointerId))
+                      e.currentTarget.releasePointerCapture(e.pointerId);
+                  }}
+                  onPointerCancel={() => { playheadDragging.current = false; }}
+                  onLostPointerCapture={() => { playheadDragging.current = false; }}
+                  onKeyDown={(e) => {
+                    if (recordFlag.current || busy || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+                    e.preventDefault();
+                    stop();
+                    setPosition(e.key === "Home" ? 0 : e.key === "End" ? projectEnd(project) : Math.max(0, Math.min(width / PX, position + (e.key === "ArrowLeft" ? -1 : 1) * (e.shiftKey ? 5 : 0.1))));
+                  }}
+                ><i /></button>
               </div>
               {project.tracks.map((t, i) => (
                 <div

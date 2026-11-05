@@ -195,3 +195,5 @@ Replaced interface color accents, tracks, waveform strokes and motion curves wit
 Phone layout: checked 390px studio Record/Edit/Mix/Setup switches, new vocal track selection and 320px home/FYP navigation without page overflow. Save/Projects stay visible; More reveals remaining actions. Production build passes. Physical phone microphone capture was not repeated for this layout-only change.
 
 Unified layout: phone navigation and the Record/Edit/Mix/Setup workflow now apply at every screen width. Checked desktop More/Setup controls in-browser; production build passes.
+
+Draggable playhead: mouse drag moved the arrow to 5.16s on desktop and 9.16s at 390px phone width, updating song time without selecting ruler text. Pointer capture, edge scrolling, recording guard and keyboard arrows/Home/End supported. Drag pauses playback; Play continues from the new position. Production build passes.
