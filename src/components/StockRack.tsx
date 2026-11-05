@@ -37,105 +37,6 @@ export default function StockRack({
         </button>
       </div>
       <details open>
-        <summary>Underground preset library</summary>
-        <p>
-          Original artist-inspired starting points, not official artist settings
-          or endorsements. Choose your song’s key below.
-        </p>
-        <select
-          aria-label="Underground preset"
-          disabled={disabled}
-          value=""
-          onChange={(e) => {
-            if (e.target.value)
-              update(applyUndergroundPreset(track, e.target.value));
-          }}
-        >
-          <option value="">Choose vocal or adlib preset…</option>
-          {(["Vocals", "Adlibs"] as const).map((category) => (
-            <optgroup key={category} label={category}>
-              {UNDERGROUND_PRESETS.filter((p) => p.category === category).map(
-                (p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ),
-              )}
-            </optgroup>
-          ))}
-        </select>
-        <a href="/presets" target="_blank" rel="noreferrer">
-          Browse all presets ↗
-        </a>
-      </details>
-      <details open>
-        <summary>Tuning studio · six vocal chains</summary>
-        <p>
-          Choose a character, then set your song’s key and scale below. These
-          chains replace this channel’s effects and preserve its volume and pan.
-        </p>
-        {TUNE_STYLES.map((s) => (
-          <button
-            key={s.name}
-            disabled={disabled}
-            title={s.description}
-            onClick={() => update(applyTuneStyle(track, s.name))}
-          >
-            {s.name}
-          </button>
-        ))}
-      </details>
-      <div className="plugin-presets">
-        <button
-          disabled={disabled}
-          onClick={() =>
-            patch({
-              gateDb: -45,
-              deEss: 0.4,
-              midGain: 1.5,
-              midFreq: 2500,
-              bypass: false,
-            })
-          }
-        >
-          Vocal clean-up
-        </button>
-        <button
-          disabled={disabled}
-          onClick={() =>
-            patch({
-              bypass: false,
-              pitch: {
-                ...p.pitch,
-                enabled: true,
-                scale: "chromatic",
-                strength: 1,
-                retune: 0,
-              },
-            })
-          }
-        >
-          Hard tune
-        </button>
-        <button
-          disabled={disabled}
-          onClick={() =>
-            patch({
-              bypass: false,
-              pitch: {
-                ...p.pitch,
-                enabled: true,
-                scale: "minor",
-                strength: 0.85,
-                retune: 90,
-              },
-            })
-          }
-        >
-          Smooth minor
-        </button>
-      </div>
-      <details open>
         <summary>01 · NOIR Pitch Lock</summary>
         <p>
           Use Auto Key above, or choose your key manually. Fast retuning gives a
@@ -243,6 +144,105 @@ export default function StockRack({
           source stays raw.
         </p>
       </details>
+      <details open>
+        <summary>Underground preset library</summary>
+        <p>
+          Original artist-inspired starting points, not official artist settings
+          or endorsements. Choose your song’s key below.
+        </p>
+        <select
+          aria-label="Underground preset"
+          disabled={disabled}
+          value=""
+          onChange={(e) => {
+            if (e.target.value)
+              update(applyUndergroundPreset(track, e.target.value));
+          }}
+        >
+          <option value="">Choose vocal or adlib preset…</option>
+          {(["Vocals", "Adlibs"] as const).map((category) => (
+            <optgroup key={category} label={category}>
+              {UNDERGROUND_PRESETS.filter((p) => p.category === category).map(
+                (p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ),
+              )}
+            </optgroup>
+          ))}
+        </select>
+        <a href="/presets" target="_blank" rel="noreferrer">
+          Browse all presets ↗
+        </a>
+      </details>
+      <details open>
+        <summary>Tuning studio · six vocal chains</summary>
+        <p>
+          Choose a character, then set your song’s key and scale below. These
+          chains replace this channel’s effects and preserve its volume and pan.
+        </p>
+        {TUNE_STYLES.map((s) => (
+          <button
+            key={s.name}
+            disabled={disabled}
+            title={s.description}
+            onClick={() => update(applyTuneStyle(track, s.name))}
+          >
+            {s.name}
+          </button>
+        ))}
+      </details>
+      <div className="plugin-presets">
+        <button
+          disabled={disabled}
+          onClick={() =>
+            patch({
+              gateDb: -45,
+              deEss: 0.4,
+              midGain: 1.5,
+              midFreq: 2500,
+              bypass: false,
+            })
+          }
+        >
+          Vocal clean-up
+        </button>
+        <button
+          disabled={disabled}
+          onClick={() =>
+            patch({
+              bypass: false,
+              pitch: {
+                ...p.pitch,
+                enabled: true,
+                scale: "chromatic",
+                strength: 1,
+                retune: 0,
+              },
+            })
+          }
+        >
+          Hard tune
+        </button>
+        <button
+          disabled={disabled}
+          onClick={() =>
+            patch({
+              bypass: false,
+              pitch: {
+                ...p.pitch,
+                enabled: true,
+                scale: "minor",
+                strength: 0.85,
+                retune: 90,
+              },
+            })
+          }
+        >
+          Smooth minor
+        </button>
+      </div>
       <details>
         <summary>02 · Clean Gate</summary>
         <button
