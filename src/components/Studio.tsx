@@ -55,6 +55,9 @@ import { normalizationLevel } from "@/lib/normalize";
 import LevelMeter from "./LevelMeter";
 import ProjectLibrary from "./ProjectLibrary";
 import MicrophoneInput from "./MicrophoneInput";
+import VoiceCheck from "./VoiceCheck";
+import { vocalRecordingLevel } from "@/lib/voice-input";
+import { stockPlugins } from "@/lib/stock-plugins";
 import { effectTail } from "@/lib/presets";
 import { useProjectEditor } from "./useProjectEditor";
 import { useSessionRecovery } from "./useSessionRecovery";
@@ -168,6 +171,7 @@ export default function Studio({
     [loopStart, setLoopStart] = useState(0),
     [loopEnd, setLoopEnd] = useState(8);
   const [microphoneId, setMicrophoneId] = useState("");
+  const [voiceAssist, setVoiceAssist] = useState(true);
   const readInputPeak = useRef(
     () => recorder.current?.capture.peak() ?? 0,
   ).current;
@@ -199,6 +203,7 @@ export default function Studio({
       track: string;
       start: number;
       when: number;
+      assist: boolean;
     } | null>(null),
     latest = useRef(project),
     recordFlag = useRef(false),
@@ -444,14 +449,18 @@ export default function Studio({
       const ctx = await engine.current!.ready(),
         capture = new MicrophoneCapture(ctx);
       try {
-        await capture.prepare(() => {
-          if (recordFlag.current) {
-            setMessage(
-              "Microphone interrupted or take size limit reached. Finalizing your take.",
-            );
-            void stopRecording();
-          }
-        }, microphoneId);
+        await capture.prepare(
+          () => {
+            if (recordFlag.current) {
+              setMessage(
+                "Microphone interrupted or take size limit reached. Finalizing your take.",
+              );
+              void stopRecording();
+            }
+          },
+          microphoneId,
+          voiceAssist,
+        );
         let track = project!.tracks.find(
           (t) => t.id === armed && t.role !== "beat",
         );
@@ -473,7 +482,13 @@ export default function Studio({
           metronome,
         });
         capture.start(when);
-        recorder.current = { capture, track: track.id, start: position, when };
+        recorder.current = {
+          capture,
+          track: track.id,
+          start: position,
+          when,
+          assist: voiceAssist,
+        };
         recordFlag.current = true;
         transportFlag.current = true;
         setRecording(true);
@@ -504,7 +519,12 @@ export default function Studio({
           id = crypto.randomUUID();
         const buffer = await engine.current!.decode(id, blob);
         assets.current.set(id, blob);
+        const vocalLevel = vocalRecordingLevel(
+          buffer.getChannelData(0),
+          take.assist,
+        );
         const clip = {
+          level: vocalLevel.level,
           id: crypto.randomUUID(),
           assetId: id,
           start: take.start,
@@ -520,7 +540,15 @@ export default function Studio({
         selectClip(clip.id);
         select(take.track);
         setPosition(take.start);
-        setMessage("Take captured. Move or trim the clip to adjust timing.");
+        setMessage(
+          vocalLevel.peak < 0.001
+            ? "Almost no microphone audio was captured. Check your headphone mic in Check my voice or select a different input."
+            : vocalLevel.quiet
+              ? "Take captured and lifted, but the input was very quiet. Run Check my voice to check your headphone mic. Original audio is preserved."
+              : take.assist
+                ? "Take captured. Vocal level assist balanced this take; the original recording is preserved."
+                : "Take captured. Move or trim the clip to adjust timing.",
+        );
       } finally {
         recorder.current = null;
         setRecording(false);
@@ -822,8 +850,16 @@ export default function Studio({
               : "Ready to create"}
           </span>
         </div>
-        <div className={`header-actions ${mobileMenu ? "mobile-menu-open" : ""}`}>
-          <button className="mobile-menu-toggle" aria-expanded={mobileMenu} onClick={() => setMobileMenu(!mobileMenu)}>{mobileMenu ? "Less" : "More"}</button>
+        <div
+          className={`header-actions ${mobileMenu ? "mobile-menu-open" : ""}`}
+        >
+          <button
+            className="mobile-menu-toggle"
+            aria-expanded={mobileMenu}
+            onClick={() => setMobileMenu(!mobileMenu)}
+          >
+            {mobileMenu ? "Less" : "More"}
+          </button>
           <Link
             className="nav-link"
             href="/"
@@ -870,7 +906,11 @@ export default function Studio({
           >
             Publish
           </button>
-          <button className="session-shortcut" disabled={locked} onClick={openProjects}>
+          <button
+            className="session-shortcut"
+            disabled={locked}
+            onClick={openProjects}
+          >
             Projects
           </button>
           <button
@@ -886,7 +926,11 @@ export default function Studio({
           >
             Backup
           </button>
-          <button className="save-shortcut" disabled={locked || !project.name.trim()} onClick={save}>
+          <button
+            className="save-shortcut"
+            disabled={locked || !project.name.trim()}
+            onClick={save}
+          >
             Save{dirty ? " •" : ""}
           </button>
           <select
@@ -944,8 +988,19 @@ export default function Studio({
         </div>
       )}
       <nav className="mobile-studio-tabs" aria-label="Studio sections">
-        {[["record", "Record"], ["edit", "Edit tracks"], ["mix", "Mix & effects"], ["setup", "Setup"]].map(([id, label]) => (
-          <button key={id} aria-pressed={mobileView === id} onClick={() => setMobileView(id)}>{label}</button>
+        {[
+          ["record", "Record"],
+          ["edit", "Edit tracks"],
+          ["mix", "Mix & effects"],
+          ["setup", "Setup"],
+        ].map(([id, label]) => (
+          <button
+            key={id}
+            aria-pressed={mobileView === id}
+            onClick={() => setMobileView(id)}
+          >
+            {label}
+          </button>
         ))}
       </nav>
       <section className="transport" aria-label="Transport">
@@ -999,7 +1054,10 @@ export default function Studio({
             disabled={busy || readOnly}
             onClick={recording ? stopRecording : startRecording}
           >
-            {recording ? "■" : "●"}<span className="mobile-record-label">{recording ? "Stop" : "Record"}</span>
+            {recording ? "■" : "●"}
+            <span className="mobile-record-label">
+              {recording ? "Stop" : "Record"}
+            </span>
           </button>
         </div>
         <output className="time">{clock(position)}</output>
@@ -1114,11 +1172,70 @@ export default function Studio({
         </small>
       </section>
       <section className="recording-tools" aria-label="Recording setup">
+        <label className="voice-assist-toggle">
+          <input
+            type="checkbox"
+            checked={voiceAssist}
+            disabled={locked}
+            onChange={(e) => setVoiceAssist(e.target.checked)}
+          />{" "}
+          Vocal level assist
+        </label>
+        <p className="voice-assist-hint">
+          Helps quiet phone/headphone takes reach a usable volume. Original
+          audio stays intact. Keep the beat below your voice in Mix & effects.
+        </p>
+        <VoiceCheck
+          deviceId={microphoneId}
+          assist={voiceAssist}
+          disabled={busy || recording || playing || readOnly}
+          onBusy={setBusy}
+          onApply={(root, scale) => {
+            const existing =
+              project.tracks.find(
+                (t) => t.id === selected && t.role !== "beat",
+              ) ??
+              project.tracks.find((t) => t.id === armed && t.role !== "beat");
+            if (!existing && project.tracks.length >= 128) {
+              setError("Track limit reached. Select an existing vocal track.");
+              return;
+            }
+            const target = existing ?? newTrack("Voice tuned vocal"),
+              plugins = stockPlugins(target.plugins);
+            const tuned = {
+              ...target,
+              plugins: {
+                ...plugins,
+                bypass: false,
+                pitch: {
+                  ...plugins.pitch,
+                  enabled: true,
+                  root,
+                  scale,
+                  strength: 0.85,
+                  retune: 50,
+                },
+              },
+            };
+            edit((p) => ({
+              ...p,
+              tracks: existing
+                ? p.tracks.map((t) => (t.id === target.id ? tuned : t))
+                : [...p.tracks, tuned],
+            }));
+            select(target.id);
+            setArmed(target.id);
+            setMobileView("mix");
+            setMessage(
+              "Voice key applied to your vocal. Check it against the beat and adjust Pitch Lock if needed.",
+            );
+          }}
+        />
         <MicrophoneInput
           value={microphoneId}
           onChange={setMicrophoneId}
           disabled={locked || playing}
-          revision={recording}
+          revision={busy ? 1 : recording ? 2 : 0}
         />
         <div className="session-meters">
           <LevelMeter label="Input" active={recording} read={readInputPeak} />
@@ -1753,24 +1870,61 @@ export default function Studio({
                     if (!timeline || !scroll) return;
                     const edge = scroll.getBoundingClientRect();
                     if (e.clientX > edge.right - 28) scroll.scrollLeft += 18;
-                    else if (e.clientX < edge.left + 28) scroll.scrollLeft -= 18;
+                    else if (e.clientX < edge.left + 28)
+                      scroll.scrollLeft -= 18;
                     const rect = timeline.getBoundingClientRect();
-                    setPosition(Math.max(0, Math.min(width / PX, 14400, (e.clientX - rect.left) / PX)));
+                    setPosition(
+                      Math.max(
+                        0,
+                        Math.min(
+                          width / PX,
+                          14400,
+                          (e.clientX - rect.left) / PX,
+                        ),
+                      ),
+                    );
                   }}
                   onPointerUp={(e) => {
                     playheadDragging.current = false;
                     if (e.currentTarget.hasPointerCapture(e.pointerId))
                       e.currentTarget.releasePointerCapture(e.pointerId);
                   }}
-                  onPointerCancel={() => { playheadDragging.current = false; }}
-                  onLostPointerCapture={() => { playheadDragging.current = false; }}
+                  onPointerCancel={() => {
+                    playheadDragging.current = false;
+                  }}
+                  onLostPointerCapture={() => {
+                    playheadDragging.current = false;
+                  }}
                   onKeyDown={(e) => {
-                    if (recordFlag.current || busy || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+                    if (
+                      recordFlag.current ||
+                      busy ||
+                      !["ArrowLeft", "ArrowRight", "Home", "End"].includes(
+                        e.key,
+                      )
+                    )
+                      return;
                     e.preventDefault();
                     stop();
-                    setPosition(e.key === "Home" ? 0 : e.key === "End" ? projectEnd(project) : Math.max(0, Math.min(width / PX, position + (e.key === "ArrowLeft" ? -1 : 1) * (e.shiftKey ? 5 : 0.1))));
+                    setPosition(
+                      e.key === "Home"
+                        ? 0
+                        : e.key === "End"
+                          ? projectEnd(project)
+                          : Math.max(
+                              0,
+                              Math.min(
+                                width / PX,
+                                position +
+                                  (e.key === "ArrowLeft" ? -1 : 1) *
+                                    (e.shiftKey ? 5 : 0.1),
+                              ),
+                            ),
+                    );
                   }}
-                ><i /></button>
+                >
+                  <i />
+                </button>
               </div>
               {project.tracks.map((t, i) => (
                 <div
@@ -2303,7 +2457,45 @@ export default function Studio({
                 end={range[0] !== range[1] ? Math.max(...range) : position + 4}
                 update={(patch) => patchTrack(track.id, patch)}
               />
-              <AutoKey key={track.id} tracks={project.tracks} track={track} buffers={engine.current!.buffers} disabled={locked} update={(patch) => patchTrack(track.id, patch)} />
+              {track.role !== "beat" && (
+                <button
+                  disabled={locked || !track.clips.length}
+                  onClick={() =>
+                    run(async () => {
+                      const clips = track.clips.map((c) => {
+                        const b = engine.current!.buffers.get(c.assetId);
+                        if (!b)
+                          throw new Error(
+                            "Reopen this project to load the vocal audio.",
+                          );
+                        const level = normalizationLevel(
+                          Array.from({ length: b.numberOfChannels }, (_, i) =>
+                            b.getChannelData(i),
+                          ),
+                          b.sampleRate,
+                          c,
+                          -6,
+                        );
+                        return { ...c, level };
+                      });
+                      patchTrack(track.id, { clips });
+                      setMessage(
+                        "Vocal clip volumes balanced with headroom. Original audio is preserved; lower the beat if it masks your voice.",
+                      );
+                    })
+                  }
+                >
+                  Balance vocal volume
+                </button>
+              )}
+              <AutoKey
+                key={track.id}
+                tracks={project.tracks}
+                track={track}
+                buffers={engine.current!.buffers}
+                disabled={locked}
+                update={(patch) => patchTrack(track.id, patch)}
+              />
               <StockRack
                 track={track}
                 disabled={locked}

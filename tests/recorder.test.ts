@@ -41,7 +41,7 @@ test("capture starts at exact audio frame and flushes final partial chunk", () =
   recorder.process([input]);
   assert.equal(messages.length, 2);
 });
-test("capture downmixes channels and transfers complete chunks without dropping samples", () => {
+test("capture keeps the strongest microphone channel without dropping samples", () => {
   const { recorder, messages, context } = processor();
   recorder.port.onmessage({ data: { startFrame: 0 } });
   for (let i = 0; i < 33; i++) {
@@ -53,6 +53,18 @@ test("capture downmixes channels and transfers complete chunks without dropping 
   recorder.port.onmessage({ data: "stop" });
   assert.equal(messages[0].samples!.length, 4096);
   assert.equal(messages[1].samples!.length, 128);
-  assert.ok(messages[0].samples!.every((x) => x === 0.5));
+  assert.ok(messages[0].samples!.every((x) => x === 0.75));
   assert.equal(messages[2].done, true);
+});
+
+test("headset silent and inverted channels do not attenuate or cancel vocals", () => {
+  for (const second of [0, -0.25]) {
+    const { recorder, messages } = processor();
+    recorder.port.onmessage({ data: { startFrame: 0 } });
+    recorder.process([
+      [new Float32Array(128).fill(0.25), new Float32Array(128).fill(second)],
+    ]);
+    recorder.port.onmessage({ data: "stop" });
+    assert.ok(messages[0].samples!.every((x) => x === 0.25));
+  }
 });

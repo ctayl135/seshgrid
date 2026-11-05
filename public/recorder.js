@@ -22,13 +22,24 @@ class PCMRecorder extends AudioWorkletProcessor {
       this.used = 0;
     }
   }
-  process(inputs) {
+  process(inputs, outputs = []) {
     const input = inputs[0];
     if (!this.active || !input?.length) return true;
-    for (let i = 0; i < input[0].length; i++) {
+    // A headset can expose a silent or inverted second channel. Keep the strongest.
+    let channel = input[0],
+      energy = -1;
+    for (const candidate of input) {
+      let value = 0;
+      for (const sample of candidate) value += sample * sample;
+      if (value > energy) {
+        energy = value;
+        channel = candidate;
+      }
+    }
+    for (let i = 0; i < channel.length; i++) {
+      const sample = channel[i];
+      if (outputs[0]?.[0]) outputs[0][0][i] = sample;
       if (currentFrame + i < this.startFrame) continue;
-      let sample = 0;
-      for (const channel of input) sample += channel[i] / input.length;
       this.chunk[this.used++] = sample;
       if (this.used === this.chunk.length) this.flush();
     }

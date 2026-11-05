@@ -1,5 +1,7 @@
 import { samplePeak } from "./meter";
 import { encodeWav } from "./wav";
+import { detectPitch } from "./stock-plugins";
+import { microphoneConstraints } from "./voice-input";
 export class MicrophoneCapture {
   private node?: AudioWorkletNode;
   private source?: MediaStreamAudioSourceNode;
@@ -9,30 +11,26 @@ export class MicrophoneCapture {
   private meterSamples?: Float32Array<ArrayBuffer>;
   private chunks: Float32Array<ArrayBuffer>[] = [];
   private frames = 0;
+  private disposed = false;
   private finish?: (blob: Blob) => void;
   private fail?: (e: Error) => void;
   private result?: Promise<Blob>;
   private stopRequested = false;
   constructor(private context: AudioContext) {}
-  async prepare(onInterrupted: () => void, deviceId = "") {
+  async prepare(onInterrupted: () => void, deviceId = "", voiceAssist = true) {
     if (!navigator.mediaDevices?.getUserMedia || !window.AudioWorkletNode)
       throw new Error(
         "Recording requires a modern browser on HTTPS or localhost.",
       );
     try {
       let timedOut = false;
-      const request = navigator.mediaDevices.getUserMedia({
-        audio: {
-          ...(deviceId ? { deviceId: { exact: deviceId } } : {}),
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-        },
-        video: false,
-      });
+      const request = navigator.mediaDevices.getUserMedia(
+        microphoneConstraints(deviceId, voiceAssist),
+      );
       void request.then(
         (stream) => {
-          if (timedOut) stream.getTracks().forEach((t) => t.stop());
+          if (timedOut || this.disposed)
+            stream.getTracks().forEach((t) => t.stop());
         },
         () => {},
       );
@@ -54,17 +52,24 @@ export class MicrophoneCapture {
       } finally {
         clearTimeout(timer);
       }
+      if (this.disposed) throw new Error("Microphone check cancelled.");
       await this.context.audioWorklet.addModule("/recorder.js");
-      this.node = new AudioWorkletNode(this.context, "seshgrid-recorder");
+      if (this.disposed) throw new Error("Microphone check cancelled.");
+      await this.context.resume();
+      if (this.disposed) throw new Error("Microphone check cancelled.");
+      this.node = new AudioWorkletNode(this.context, "seshgrid-recorder", {
+        outputChannelCount: [1],
+      });
       this.source = this.context.createMediaStreamSource(this.stream);
       this.analyser = this.context.createAnalyser();
       this.analyser.fftSize = 2048;
       this.meterSamples = new Float32Array(this.analyser.fftSize);
-      this.source.connect(this.analyser);
+
       this.sink = this.context.createGain();
       this.sink.gain.value = 0;
       this.source
         .connect(this.node)
+        .connect(this.analyser)
         .connect(this.sink)
         .connect(this.context.destination);
       this.result = new Promise<Blob>((resolve, reject) => {
@@ -170,7 +175,18 @@ export class MicrophoneCapture {
     this.analyser.getFloatTimeDomainData(this.meterSamples);
     return samplePeak(this.meterSamples);
   }
+  pitchHz() {
+    if (!this.analyser || !this.meterSamples) return 0;
+    this.analyser.getFloatTimeDomainData(this.meterSamples);
+    return detectPitch(this.meterSamples, this.context.sampleRate);
+  }
+  inputLabel() {
+    return (
+      this.stream?.getAudioTracks()[0]?.label || "System default microphone"
+    );
+  }
   dispose() {
+    this.disposed = true;
     this.context.removeEventListener("statechange", this.onStateChange);
     this.stream?.getTracks().forEach((t) => {
       t.onended = null;

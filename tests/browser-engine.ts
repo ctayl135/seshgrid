@@ -40,6 +40,11 @@ button.onclick = async () => {
             (constraints.audio as MediaTrackConstraints).deviceId !== undefined,
             "Chosen microphone constraint was omitted",
           );
+          check(
+            (constraints.audio as MediaTrackConstraints).autoGainControl ===
+              true,
+            "Voice gain assistance was not requested",
+          );
           return destination.stream;
         },
       },
@@ -61,6 +66,11 @@ button.onclick = async () => {
       capture.peak() > 0.09 && capture.peak() < 0.11,
       "Input meter does not measure raw microphone signal",
     );
+    check(
+      Math.abs(capture.pitchHz() - 440) < 4,
+      "Live voice note detection failed",
+    );
+    const expectedCaptureDuration = context.currentTime - when;
     const blob = await capture.stop(),
       id = crypto.randomUUID(),
       recorded = await engine.decode(id, blob);
@@ -69,8 +79,8 @@ button.onclick = async () => {
         samples.reduce((sum, n) => sum + n * n, 0) / samples.length,
       );
     check(
-      recorded.duration > 0.75 && recorded.duration < 1.5,
-      "Captured take duration is not aligned with scheduled start",
+      expectedCaptureDuration > 0.75 && Math.abs(recorded.duration - expectedCaptureDuration) < 0.1,
+      `Captured take duration ${recorded.duration} is not aligned with scheduled start (${expectedCaptureDuration})`,
     );
     check(
       rms > 0.05 && rms < 0.09,

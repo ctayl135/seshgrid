@@ -82,7 +82,7 @@ export function detectPitch(samples: Float32Array, rate: number, start = 0) {
     x[i] -= mean;
     energy += x[i] * x[i];
   }
-  if (Math.sqrt(energy / n) < 0.006) return 0;
+  if (Math.sqrt(energy / n) < 0.0005) return 0;
   const min = Math.max(2, Math.floor(sr / 1000)),
     max = Math.min(Math.ceil(sr / 70), Math.floor(n / 2)),
     diff = new Float64Array(max + 1);

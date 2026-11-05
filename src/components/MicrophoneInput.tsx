@@ -9,7 +9,7 @@ export default function MicrophoneInput({
   value: string;
   onChange: (id: string) => void;
   disabled: boolean;
-  revision: boolean;
+  revision: boolean | number;
 }) {
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]),
     [error, setError] = useState("");
