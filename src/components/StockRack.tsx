@@ -137,6 +137,31 @@ export default function StockRack({
       </div>
       <details open>
         <summary>01 · NOIR Pitch Lock</summary>
+        <p>
+          Use Auto Key above, or choose your key manually. Fast retuning gives a
+          hard tuned sound; slower retuning keeps more natural movement.
+        </p>
+        <div className="tuning-quick-controls">
+          {[
+            ["Natural", 0.65, 120],
+            ["Tight", 0.9, 35],
+            ["Hard", 1, 0],
+          ].map(([name, strength, retune]) => (
+            <button
+              key={name}
+              disabled={off}
+              onClick={() =>
+                pitch({
+                  enabled: true,
+                  strength: Number(strength),
+                  retune: Number(retune),
+                })
+              }
+            >
+              {name} tuning
+            </button>
+          ))}
+        </div>
         <button
           disabled={off}
           aria-pressed={p.pitch.enabled}

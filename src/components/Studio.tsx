@@ -45,6 +45,7 @@ import Waveform from "./Waveform";
 import VocalRack from "./VocalRack";
 import BeatRack from "./BeatRack";
 import StockRack from "./StockRack";
+import AutoKey from "./AutoKey";
 import PublishPanel from "./PublishPanel";
 import InvitePanel from "./InvitePanel";
 import { beatSession } from "@/lib/community";
@@ -2302,6 +2303,7 @@ export default function Studio({
                 end={range[0] !== range[1] ? Math.max(...range) : position + 4}
                 update={(patch) => patchTrack(track.id, patch)}
               />
+              <AutoKey key={track.id} tracks={project.tracks} track={track} buffers={engine.current!.buffers} disabled={locked} update={(patch) => patchTrack(track.id, patch)} />
               <StockRack
                 track={track}
                 disabled={locked}

@@ -197,3 +197,5 @@ Phone layout: checked 390px studio Record/Edit/Mix/Setup switches, new vocal tra
 Unified layout: phone navigation and the Record/Edit/Mix/Setup workflow now apply at every screen width. Checked desktop More/Setup controls in-browser; production build passes.
 
 Draggable playhead: mouse drag moved the arrow to 5.16s on desktop and 9.16s at 390px phone width, updating song time without selecting ruler text. Pointer capture, edge scrolling, recording guard and keyboard arrows/Home/End supported. Drag pauses playback; Play continues from the new position. Production build passes.
+
+Auto Key: known major/minor phrases, transposition, polyphonic chords, silent stereo channels, source trim, silence/single-tone rejection tested. Browser import of an 8-second synthetic C-major progression detected C major; applying it to a vocal enabled Major Pitch Lock, and Tight set 90%/35ms. Uses local spectral pitch-class analysis and major/minor profile correlation (background: https://essentia.upf.edu/reference/std_Key.html), with alternative keys for ambiguous material; no Essentia code or dependency included.
